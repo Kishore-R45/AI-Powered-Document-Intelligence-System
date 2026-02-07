@@ -1,0 +1,7 @@
+langchain==0.1.16
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+pypdf==4.2.0
+transformers==4.38.2
+accelerate==0.27.2
+torch==2.1.2
