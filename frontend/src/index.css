@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import './styles/scrollbar.css';
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    /* Changed from bg-neutral-25 (pure white) to a subtle warm gray */
+    @apply bg-[#F6F7F9] text-neutral-900 font-sans;
+  }
+
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  img {
+    @apply max-w-full h-auto;
+  }
+}
+
+@layer components {
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .page-heading {
+    @apply text-2xl font-bold text-neutral-900 tracking-tight;
+  }
+
+  .page-subheading {
+    @apply text-sm text-neutral-500 mt-1;
+  }
+
+  .form-card {
+    @apply bg-white rounded-xl border border-neutral-200 shadow-xs p-6 sm:p-8;
+  }
+
+  .auth-container {
+    @apply min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12;
+  }
+
+  .auth-card {
+    @apply w-full max-w-md bg-white rounded-xl border border-neutral-200 shadow-lg p-8;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-800;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg;
+  }
+}
