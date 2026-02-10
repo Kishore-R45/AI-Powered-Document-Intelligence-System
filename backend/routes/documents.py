@@ -214,23 +214,51 @@ def get_document(document_id):
 
 
 @documents_bp.route('/view/<document_id>', methods=['GET'])
-@require_auth
+@documents_bp.route('/<document_id>/view', methods=['GET'])
 @handle_errors
 def view_document(document_id):
     """
     Get pre-signed URL for viewing a document.
-    This endpoint is optimized for quick document viewing.
+    Supports two auth methods:
+    1. Authorization header (returns JSON with url)
+    2. Token query param (redirects to S3 URL for browser viewing)
     
-    Response:
-        - url: Pre-signed S3 URL for viewing
+    Query params:
+        - token: JWT token for browser-based access
     """
+    from flask import redirect
+    from utils.jwt_utils import JWTUtils
+    
+    user_id = None
+    is_browser_redirect = False
+    
+    # Try token from query param first (for browser access)
+    token = request.args.get('token')
+    if token:
+        payload, error = JWTUtils.decode_token(token)
+        if payload and not error:
+            user_id = payload.get('sub')  # JWT uses 'sub' for user_id
+            is_browser_redirect = True
+    
+    # Fall back to Authorization header
+    if not user_id:
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ', 1)[1]
+            payload, error = JWTUtils.decode_token(token)
+            if payload and not error:
+                user_id = payload.get('sub')
+    
+    if not user_id:
+        return error_response("Authorization required", 401)
+    
     document = Document.find_by_id(document_id)
     
     if not document:
         return error_response("Document not found", 404)
     
     # Verify ownership
-    if str(document['user_id']) != g.user_id:
+    if str(document['user_id']) != user_id:
         return error_response("Access denied", 403)
     
     # Generate pre-signed URL
@@ -242,9 +270,13 @@ def view_document(document_id):
     # Log document access
     AuditLog.log(
         action=AuditLog.ACTION_DOCUMENT_VIEW,
-        user_id=g.user_id,
+        user_id=user_id,
         details={'document_id': document_id}
     )
+    
+    # Redirect for browser access, return JSON for API calls
+    if is_browser_redirect:
+        return redirect(view_url, code=302)
     
     return success_response(data={'url': view_url})
 
@@ -354,4 +386,52 @@ def update_document(document_id):
     return success_response(
         data={'document': Document.to_dict(updated_doc)},
         message="Document updated successfully."
+    )
+
+
+@documents_bp.route('/reindex', methods=['POST'])
+@require_auth
+@handle_errors
+def reindex_documents():
+    """
+    Re-index all documents for the current user.
+    This regenerates embeddings for all documents in Pinecone.
+    Useful when Pinecone index was recreated or embeddings were lost.
+    
+    Response:
+        - message: Success message
+        - indexed: Number of documents indexed
+        - failed: Number of documents that failed
+    """
+    documents = Document.find_by_user(g.user_id, limit=500)
+    
+    indexed = 0
+    failed = 0
+    
+    for doc in documents:
+        try:
+            extracted_text = doc.get('extracted_text', '')
+            
+            if not extracted_text:
+                continue
+            
+            chunks = EmbeddingService.chunk_text(extracted_text)
+            if chunks:
+                success = EmbeddingService.store_embeddings(
+                    user_id=g.user_id,
+                    document_id=str(doc['_id']),
+                    document_name=doc.get('name', 'Untitled'),
+                    chunks=chunks
+                )
+                if success:
+                    indexed += 1
+                else:
+                    failed += 1
+        except Exception as e:
+            print(f"Error reindexing document {doc['_id']}: {e}")
+            failed += 1
+    
+    return success_response(
+        message=f"Reindexing complete. {indexed} documents indexed, {failed} failed.",
+        data={'indexed': indexed, 'failed': failed}
     )

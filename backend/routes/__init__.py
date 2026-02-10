@@ -12,9 +12,9 @@ from routes.dashboard import dashboard_bp
 
 def register_routes(app):
     """Register all blueprints with the Flask app."""
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(documents_bp, url_prefix='/documents')
-    app.register_blueprint(chat_bp, url_prefix='/chat')
-    app.register_blueprint(notifications_bp, url_prefix='/notifications')
-    app.register_blueprint(user_bp, url_prefix='/user')
-    app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(documents_bp, url_prefix='/api/documents')
+    app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+    app.register_blueprint(user_bp, url_prefix='/api/user')
+    app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')

@@ -24,12 +24,35 @@ class EmbeddingService:
     
     @classmethod
     def get_pinecone_index(cls):
-        """Get or initialize Pinecone index."""
+        """Get or initialize Pinecone index. Creates index if it doesn't exist."""
         if cls._pinecone_index is None:
             from pinecone import Pinecone
+            from pinecone import ServerlessSpec
+            import time
             
             pc = Pinecone(api_key=Config.PINECONE_API_KEY)
-            cls._pinecone_index = pc.Index(Config.PINECONE_INDEX_NAME)
+            index_name = Config.PINECONE_INDEX_NAME
+            
+            # Check if index exists, create if not
+            existing_indexes = [idx.name for idx in pc.list_indexes()]
+            
+            if index_name not in existing_indexes:
+                print(f"Creating Pinecone index '{index_name}'...")
+                pc.create_index(
+                    name=index_name,
+                    dimension=384,  # all-MiniLM-L6-v2 produces 384-dim embeddings
+                    metric='cosine',
+                    spec=ServerlessSpec(
+                        cloud='aws',
+                        region='us-east-1'
+                    )
+                )
+                # Wait for index to be ready
+                while not pc.describe_index(index_name).status['ready']:
+                    time.sleep(1)
+                print(f"Pinecone index '{index_name}' created successfully.")
+            
+            cls._pinecone_index = pc.Index(index_name)
         return cls._pinecone_index
     
     @classmethod

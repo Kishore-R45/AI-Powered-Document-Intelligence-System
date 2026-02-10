@@ -45,7 +45,7 @@ def list_notifications():
     })
 
 
-@notifications_bp.route('/<notification_id>/read', methods=['POST'])
+@notifications_bp.route('/<notification_id>/read', methods=['POST', 'PATCH'])
 @require_auth
 @handle_errors
 def mark_as_read(notification_id):
@@ -63,7 +63,7 @@ def mark_as_read(notification_id):
     return success_response(message="Notification marked as read.")
 
 
-@notifications_bp.route('/read-all', methods=['POST'])
+@notifications_bp.route('/read-all', methods=['POST', 'PATCH'])
 @require_auth
 @handle_errors
 def mark_all_as_read():

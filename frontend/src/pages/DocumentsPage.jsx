@@ -7,6 +7,7 @@ import Spinner from '../components/common/Spinner';
 import useDocuments from '../hooks/useDocuments';
 import { ToastContext } from '../context/ToastContext';
 import { ROUTES } from '../utils/constants';
+import { getToken } from '../utils/storage';
 
 /**
  * Documents listing page.
@@ -42,7 +43,8 @@ export default function DocumentsPage() {
 
   const handleView = (documentId) => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL;
-    window.open(`${baseUrl}/documents/${documentId}/view`, '_blank', 'noopener,noreferrer');
+    const token = getToken();
+    window.open(`${baseUrl}/documents/${documentId}/view?token=${encodeURIComponent(token)}`, '_blank', 'noopener,noreferrer');
   };
 
   if (loading && documents.length === 0) {
