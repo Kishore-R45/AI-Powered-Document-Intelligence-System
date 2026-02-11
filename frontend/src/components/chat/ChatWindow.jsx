@@ -21,9 +21,9 @@ export default function ChatWindow({ messages = [], onSend, loading = false }) {
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] bg-white rounded-xl border border-neutral-200 shadow-xs">
+    <div className="flex flex-col h-full bg-white rounded-xl border border-neutral-200 shadow-xs">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar min-h-0">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <EmptyState

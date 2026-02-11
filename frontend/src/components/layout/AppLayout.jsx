@@ -14,10 +14,12 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-[#F6F7F9]">
       <Navbar isAuthenticated={true} user={user} onLogout={logout} />
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <Outlet />
+        <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto overflow-y-auto">
+          <div className="h-full">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
