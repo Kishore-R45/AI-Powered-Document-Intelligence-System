@@ -97,15 +97,15 @@ class User:
     
     @staticmethod
     def to_dict(user: dict) -> dict:
-        """Convert user document to safe dictionary (no password)."""
+        """Convert user document to safe dictionary with camelCase keys for frontend."""
         if not user:
             return None
         return {
             'id': str(user['_id']),
             'name': user.get('name'),
             'email': user.get('email'),
-            'is_active': user.get('is_active', False),
-            'created_at': user.get('created_at').isoformat() if user.get('created_at') else None,
+            'isActive': user.get('is_active', False),
+            'createdAt': user.get('created_at').isoformat() if user.get('created_at') else None,
         }
     
     @staticmethod
