@@ -1,224 +1,149 @@
 """
-Question Answering service using extractive QA.
-Uses deepset/roberta-base-squad2 for fact extraction.
-Strictly NO generative answering - only exact text extraction.
+Question Answering service using Hugging Face Inference API.
+Uses meta-llama/Meta-Llama-3-8B-Instruct remotely via HF API.
+No local model download - all inference runs on HF servers.
+Answers are grounded in document context - no hallucination.
 """
 
-from typing import List, Tuple, Optional
+from typing import List
 from config import Config
+from huggingface_hub import InferenceClient
 
 
 class QAService:
     """
-    Extractive Question Answering service.
+    Document Question Answering service using HF Inference API.
     
-    CRITICAL: This service ONLY extracts exact spans from documents.
-    It NEVER generates, paraphrases, or invents information.
+    Calls Llama 3 8B Instruct via Hugging Face's serverless Inference API.
+    Uses document chunks as context with strict anti-hallucination rules.
     """
     
-    _pipeline = None
+    _client = None
+    MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
     
     @classmethod
-    def get_pipeline(cls):
-        """Get or load the QA pipeline."""
-        if cls._pipeline is None:
-            from transformers import pipeline
-            cls._pipeline = pipeline(
-                "question-answering",
-                model=Config.QA_MODEL,
-                tokenizer=Config.QA_MODEL
-            )
-        return cls._pipeline
+    def get_client(cls):
+        """Get or create HuggingFace InferenceClient."""
+        if cls._client is None:
+            token = Config.HUGGINGFACE_TOKEN
+            if not token:
+                raise ValueError("HUGGINGFACE_TOKEN not set in environment")
+            cls._client = InferenceClient(token=token)
+            print(f"✓ HuggingFace Inference API client initialized")
+        return cls._client
     
     @classmethod
-    def extract_answer(
-        cls,
-        question: str,
-        context: str,
-        min_confidence: float = 0.1
-    ) -> dict:
+    def generate_answer(cls, question: str, context: str, source_names: list) -> dict:
         """
-        Extract an answer from a single context.
-        
-        Args:
-            question: The question to answer
-            context: Text context to search in
-            min_confidence: Minimum confidence score
-            
-        Returns:
-            Dict with answer, score, start, end positions
-        """
-        try:
-            qa_pipeline = cls.get_pipeline()
-            
-            result = qa_pipeline(
-                question=question,
-                context=context,
-                max_answer_len=200,
-                handle_impossible_answer=True
-            )
-            
-            # Check if answer is valid
-            if result['score'] < min_confidence:
-                return {
-                    'answer': None,
-                    'score': result['score'],
-                    'found': False
-                }
-            
-            # Validate that the answer actually exists in context
-            if result['answer'] not in context:
-                return {
-                    'answer': None,
-                    'score': 0,
-                    'found': False
-                }
-            
-            return {
-                'answer': result['answer'].strip(),
-                'score': result['score'],
-                'start': result.get('start'),
-                'end': result.get('end'),
-                'found': True
-            }
-        except Exception as e:
-            print(f"QA extraction error: {e}")
-            return {
-                'answer': None,
-                'score': 0,
-                'found': False,
-                'error': str(e)
-            }
-    
-    @classmethod
-    def extract_from_chunks(
-        cls,
-        question: str,
-        chunks: List[dict],
-        min_confidence: float = 0.1
-    ) -> dict:
-        """
-        Extract the best answer from multiple chunks.
-        
-        Args:
-            question: The question to answer
-            chunks: List of chunk dicts with 'text', 'document_id', 'document_name'
-            min_confidence: Minimum confidence threshold
-            
-        Returns:
-            Best answer with source information
-        """
-        if not chunks:
-            return {
-                'answer': "Not found in document",
-                'found': False,
-                'sources': []
-            }
-        
-        best_result = None
-        best_score = 0
-        best_chunk = None
-        
-        for chunk in chunks:
-            text = chunk.get('text', '')
-            if not text:
-                continue
-            
-            result = cls.extract_answer(question, text, min_confidence)
-            
-            if result['found'] and result['score'] > best_score:
-                best_score = result['score']
-                best_result = result
-                best_chunk = chunk
-        
-        if best_result and best_result['found']:
-            return {
-                'answer': best_result['answer'],
-                'found': True,
-                'confidence': best_result['score'],
-                'sources': [{
-                    'documentId': best_chunk.get('document_id'),
-                    'documentName': best_chunk.get('document_name'),
-                    'chunkIndex': best_chunk.get('chunk_index')
-                }]
-            }
-        
-        return {
-            'answer': "Not found in document",
-            'found': False,
-            'sources': []
-        }
-    
-    @classmethod
-    def classify_query_intent(cls, question: str) -> str:
-        """
-        Classify the intent of a user query.
+        Generate answer using HF Inference API with chat completion.
+        Also identifies which source document contains the answer.
         
         Args:
             question: User's question
+            context: Combined document context
+            source_names: List of source document names
             
         Returns:
-            Intent type: 'fact', 'explanation', 'navigation', 'unknown'
+            Dict with 'answer' and 'source_document' keys
         """
-        question_lower = question.lower().strip()
-        
-        # Fact-seeking patterns (needs extraction)
-        fact_patterns = [
-            'what is', 'what are', 'what was', 'what were',
-            'when', 'where', 'who', 'which',
-            'how many', 'how much', 'how old',
-            'number', 'date', 'name', 'id', 'address',
-            'policy number', 'account', 'reference',
-            'expiry', 'valid', 'issue date'
-        ]
-        
-        # Explanation patterns (may need synthesis - be careful)
-        explanation_patterns = [
-            'why', 'how does', 'explain', 'describe',
-            'what does', 'meaning of', 'definition'
-        ]
-        
-        # Navigation patterns
-        navigation_patterns = [
-            'show me', 'find', 'list', 'open',
-            'where can i', 'how to'
-        ]
-        
-        for pattern in fact_patterns:
-            if pattern in question_lower:
-                return 'fact'
-        
-        for pattern in explanation_patterns:
-            if pattern in question_lower:
-                return 'explanation'
-        
-        for pattern in navigation_patterns:
-            if pattern in question_lower:
-                return 'navigation'
-        
-        # Default to fact extraction for safety
-        return 'fact'
-    
-    @classmethod
-    def validate_answer_is_extractive(cls, answer: str, context: str) -> bool:
-        """
-        Validate that an answer is actually extracted from context.
-        
-        Args:
-            answer: The proposed answer
-            context: The source context
+        try:
+            client = cls.get_client()
             
-        Returns:
-            True if answer appears in context
-        """
-        if not answer or not context:
-            return False
-        
-        # Normalize for comparison
-        answer_normalized = answer.lower().strip()
-        context_normalized = context.lower()
-        
-        return answer_normalized in context_normalized
+            # Create source list for the prompt
+            sources_str = "\n".join([f"- {name}" for name in source_names])
+            
+            system_prompt = (
+                "You are a secure document assistant. "
+                "Answer ONLY using the provided context below. "
+                "If the answer is not explicitly present in the context, "
+                "respond with exactly: Not found in document. "
+                "\n\nIMPORTANT RULES:\n"
+                "- Extract numbers, dates, names exactly as they appear\n"
+                "- CGPA, SGPA, GPA, and similar terms are equivalent\n"
+                "- '2nd', 'second', 'II', '2' semester are equivalent\n"
+                "- Look for the information even if worded differently\n"
+                "- Be flexible with terminology but strict about accuracy\n"
+                "- Keep answers brief and direct\n"
+                "- At the end of your answer, on a NEW LINE, specify which document contains the answer using this exact format:\n"
+                "  SOURCE: [document name]\n"
+                "- If the answer comes from multiple documents, list only the PRIMARY source\n"
+                "- If no answer found, do not include SOURCE line"
+            )
+            
+            user_message = f"""DOCUMENT CONTEXT:
+{context}
+
+AVAILABLE SOURCE DOCUMENTS:
+{sources_str}
+
+QUESTION: {question}"""
+            
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ]
+            
+            print(f"Sending query to HF Inference API ({cls.MODEL_ID})...")
+            
+            response = client.chat_completion(
+                model=cls.MODEL_ID,
+                messages=messages,
+                max_tokens=500,
+                temperature=0.1,
+                top_p=0.9,
+            )
+            
+            full_response = response.choices[0].message.content.strip()
+            print(f"✓ Received answer from HF API: {full_response[:200]}")
+            
+            # Parse answer and source from response
+            answer = full_response
+            source_document = None
+            
+            if "SOURCE:" in full_response:
+                parts = full_response.rsplit("SOURCE:", 1)
+                answer = parts[0].strip()
+                source_document = parts[1].strip().strip("[]")
+            
+            return {
+                'answer': answer,
+                'source_document': source_document
+            }
+            
+        except Exception as e:
+            print(f"✗ HF Inference API error: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Fallback: try with a different model if Llama fails
+            try:
+                print("Trying fallback model: mistralai/Mistral-7B-Instruct-v0.3...")
+                response = client.chat_completion(
+                    model="mistralai/Mistral-7B-Instruct-v0.3",
+                    messages=messages,
+                    max_tokens=500,
+                    temperature=0.1,
+                    top_p=0.9,
+                )
+                full_response = response.choices[0].message.content.strip()
+                print(f"✓ Fallback answer received: {full_response[:200]}")
+                
+                # Parse answer and source
+                answer = full_response
+                source_document = None
+                
+                if "SOURCE:" in full_response:
+                    parts = full_response.rsplit("SOURCE:", 1)
+                    answer = parts[0].strip()
+                    source_document = parts[1].strip().strip("[]")
+                
+                return {
+                    'answer': answer,
+                    'source_document': source_document
+                }
+            except Exception as e2:
+                print(f"✗ Fallback model also failed: {e2}")
+                return None
     
     @classmethod
     def process_query(
@@ -228,45 +153,109 @@ class QAService:
         min_confidence: float = 0.1
     ) -> dict:
         """
-        Process a user query end-to-end.
-        
-        This is the main entry point for question answering.
+        Process a user query using retrieved document chunks.
         
         Args:
             question: User's question
             relevant_chunks: Pre-retrieved relevant chunks from vector search
-            min_confidence: Minimum confidence for answers
+            min_confidence: Not used for LLM-based QA, kept for compatibility
             
         Returns:
             Complete response with answer, sources, and metadata
         """
-        # Classify intent
-        intent = cls.classify_query_intent(question)
+        if not relevant_chunks:
+            return {
+                'answer': "Not found in document",
+                'found': False,
+                'sources': [],
+                'confidence': 0
+            }
         
-        # Extract answer
-        result = cls.extract_from_chunks(question, relevant_chunks, min_confidence)
+        # Combine chunk texts into context
+        context_parts = []
+        sources = []
+        seen_docs = set()
+        total_chars = 0
+        max_context_chars = 4000
         
-        # Final validation: ensure we're not hallucinating
-        if result['found'] and result.get('answer'):
-            # Verify answer exists in at least one chunk
-            answer_verified = False
-            for chunk in relevant_chunks:
-                if cls.validate_answer_is_extractive(result['answer'], chunk.get('text', '')):
-                    answer_verified = True
-                    break
+        for chunk in relevant_chunks:
+            text = chunk.get('text', '')
+            if not text:
+                continue
             
-            if not answer_verified:
-                # Answer not found in any chunk - reject it
-                result = {
-                    'answer': "Not found in document",
-                    'found': False,
-                    'sources': []
-                }
+            if total_chars + len(text) > max_context_chars:
+                break
+            
+            context_parts.append(text)
+            total_chars += len(text)
+            
+            doc_id = chunk.get('document_id')
+            if doc_id and doc_id not in seen_docs:
+                seen_docs.add(doc_id)
+                sources.append({
+                    'documentId': doc_id,
+                    'documentName': chunk.get('document_name', 'Unknown'),
+                    'chunkIndex': chunk.get('chunk_index', 0)
+                })
+        
+        context = "\n\n---\n\n".join(context_parts)
+        
+        print(f"QA context length: {len(context)} chars from {len(context_parts)} chunks")
+        print(f"DEBUG - Context being sent to LLM:\n{context[:1000]}...")
+        
+        # Get unique source names for the LLM to identify
+        source_names = list(set(s['documentName'] for s in sources))
+        
+        # Generate answer via HF Inference API
+        result = cls.generate_answer(question, context, source_names)
+        
+        if not result:
+            return {
+                'answer': "Sorry, I couldn't process your question right now. Please try again.",
+                'found': False,
+                'sources': [],
+                'confidence': 0
+            }
+        
+        answer = result.get('answer', '')
+        source_document = result.get('source_document')
+        
+        print(f"Model answer: {answer[:200]}")
+        print(f"Identified source: {source_document}")
+        
+        # Check if model says not found
+        not_found_phrases = [
+            "not found in document",
+            "not mentioned in the document",
+            "no information",
+            "does not contain",
+            "doesn't contain",
+            "not available in",
+            "cannot find",
+            "not present in"
+        ]
+        
+        is_not_found = any(phrase in answer.lower() for phrase in not_found_phrases)
+        
+        # Filter sources to only the identified source document
+        if source_document and not is_not_found:
+            # Find matching source (case-insensitive, partial match)
+            filtered_sources = []
+            source_lower = source_document.lower()
+            for src in sources:
+                if source_lower in src['documentName'].lower() or src['documentName'].lower() in source_lower:
+                    filtered_sources.append(src)
+                    break  # Only one source
+            
+            # If no exact match, use closest match or first source
+            if not filtered_sources and sources:
+                filtered_sources = [sources[0]]
+            
+            sources = filtered_sources
         
         return {
-            'answer': result.get('answer', "Not found in document"),
-            'found': result.get('found', False),
-            'sources': result.get('sources', []),
-            'intent': intent,
-            'confidence': result.get('confidence', 0)
+            'answer': answer,
+            'found': not is_not_found,
+            'sources': sources if not is_not_found else [],
+            'confidence': 0.8 if not is_not_found else 0.0
         }

@@ -71,12 +71,17 @@ class TextExtractionService:
         Returns:
             Extracted text
         """
+        print(f"Extracting text from {mime_type} file ({len(file_bytes)} bytes)")
+        
         if mime_type == 'application/pdf':
-            return cls.extract_from_pdf(file_bytes)
+            text = cls.extract_from_pdf(file_bytes)
         elif mime_type in ['image/jpeg', 'image/png', 'image/webp']:
-            return cls.extract_from_image(file_bytes)
+            text = cls.extract_from_image(file_bytes)
         else:
-            return ""
+            text = ""
+        
+        print(f"Extracted {len(text)} characters of text")
+        return text
     
     @staticmethod
     def clean_text(text: str) -> str:

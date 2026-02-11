@@ -19,7 +19,7 @@ class ExpiryReminderJob:
     Should be run daily via scheduler (APScheduler, Celery, or cron).
     """
     
-    REMINDER_DAYS = [1, 7]  # Send reminders at 1 day and 7 days before expiry
+    REMINDER_DAYS = [0, 1, 7]  # Send reminders at 0 (today), 1 day and 7 days before expiry
     
     @classmethod
     def run(cls):
@@ -34,8 +34,11 @@ class ExpiryReminderJob:
         for days in cls.REMINDER_DAYS:
             reminders_sent += cls._process_expiring_documents(days)
         
-        print(f"[{datetime.utcnow()}] Expiry reminder job complete. Sent {reminders_sent} reminders.")
-        return reminders_sent
+        # Also check for already expired documents
+        expired_notifications = cls.check_expired()
+        
+        print(f"[{datetime.utcnow()}] Expiry reminder job complete. Sent {reminders_sent} reminders, {expired_notifications} expired notifications.")
+        return reminders_sent + expired_notifications
     
     @classmethod
     def _process_expiring_documents(cls, days: int) -> int:
@@ -80,12 +83,19 @@ class ExpiryReminderJob:
                 if existing_notification:
                     continue  # Already sent today
                 
-                # Create notification
+                # Create notification with appropriate title
+                if days == 0:
+                    title = "Document Expires Today"
+                    message = f"'{doc.get('name')}' expires TODAY ({doc['expiry_date'].strftime('%B %d, %Y')})!"
+                else:
+                    title = f"Document Expiring in {days} Day{'s' if days > 1 else ''}"
+                    message = f"'{doc.get('name')}' will expire on {doc['expiry_date'].strftime('%B %d, %Y')}."
+                
                 Notification.create(
                     user_id=str(doc['user_id']),
                     notification_type=Notification.TYPE_EXPIRY_REMINDER,
-                    title=f"Document Expiring in {days} Day{'s' if days > 1 else ''}",
-                    message=f"'{doc.get('name')}' will expire on {doc['expiry_date'].strftime('%B %d, %Y')}.",
+                    title=title,
+                    message=message,
                     document_id=str(doc['_id']),
                     metadata={'reminder_days': days}
                 )

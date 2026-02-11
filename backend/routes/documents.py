@@ -110,14 +110,19 @@ def upload_document():
     
     # Generate embeddings and store in Pinecone
     if extracted_text:
+        print(f"Extracted text length: {len(extracted_text)} characters")
         chunks = EmbeddingService.chunk_text(extracted_text)
+        print(f"Created {len(chunks)} chunks from extracted text")
         if chunks:
-            EmbeddingService.store_embeddings(
+            success = EmbeddingService.store_embeddings(
                 user_id=g.user_id,
                 document_id=str(document['_id']),
                 document_name=name,
                 chunks=chunks
             )
+            print(f"Embedding storage {'succeeded' if success else 'failed'}")
+    else:
+        print("No text extracted from document")
     
     # Create upload notification
     Notification.create(

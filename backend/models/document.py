@@ -153,20 +153,21 @@ class Document:
     
     @staticmethod
     def to_dict(doc: dict) -> dict:
-        """Convert document to dictionary."""
+        """Convert document to dictionary with camelCase keys for frontend."""
         if not doc:
             return None
         return {
             'id': str(doc['_id']),
             'name': doc.get('name'),
             'type': doc.get('type'),
-            'original_filename': doc.get('original_filename'),
-            'file_size': doc.get('file_size'),
-            'mime_type': doc.get('mime_type'),
-            'has_expiry': doc.get('has_expiry', False),
-            'expiry_date': doc.get('expiry_date').isoformat() if doc.get('expiry_date') else None,
-            'created_at': doc.get('created_at').isoformat() if doc.get('created_at') else None,
-            'updated_at': doc.get('updated_at').isoformat() if doc.get('updated_at') else None,
+            'originalFilename': doc.get('original_filename'),
+            'fileSize': doc.get('file_size'),
+            'mimeType': doc.get('mime_type'),
+            'hasExpiry': doc.get('has_expiry', False),
+            'expiryDate': doc.get('expiry_date').isoformat() if doc.get('expiry_date') else None,
+            'uploadDate': doc.get('created_at').isoformat() if doc.get('created_at') else None,
+            'createdAt': doc.get('created_at').isoformat() if doc.get('created_at') else None,
+            'updatedAt': doc.get('updated_at').isoformat() if doc.get('updated_at') else None,
         }
     
     @staticmethod

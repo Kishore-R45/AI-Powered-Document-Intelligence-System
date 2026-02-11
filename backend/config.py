@@ -62,7 +62,7 @@ class Config:
     
     # AI Models
     EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
-    QA_MODEL = 'deepset/roberta-base-squad2'
+    QA_MODEL = 'meta-llama/Llama-3.1-8B-Instruct'  # Local model via transformers
     
     # CORS
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',')

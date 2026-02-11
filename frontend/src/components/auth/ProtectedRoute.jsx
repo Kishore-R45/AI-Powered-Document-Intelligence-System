@@ -9,20 +9,20 @@ import { ROUTES } from '../../utils/constants';
  * Shows a loading spinner while auth state is being determined.
  */
 export default function ProtectedRoute({ children }) {
-//   const { isAuthenticated, loading } = useContext(AuthContext);
-//   const location = useLocation();
+  const { isAuthenticated, loading } = useContext(AuthContext);
+  const location = useLocation();
 
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center">
-//         <Spinner size="xl" className="text-brand-600" />
-//       </div>
-//     );
-//   }
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size="xl" className="text-brand-600" />
+      </div>
+    );
+  }
 
-//   if (!isAuthenticated) {
-//     return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
-//   }
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
+  }
 
   return children;
 }

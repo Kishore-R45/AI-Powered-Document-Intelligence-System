@@ -147,8 +147,11 @@ class EmbeddingService:
         try:
             index = cls.get_pinecone_index()
             
+            print(f"Storing embeddings for document {document_id}: {len(chunks)} chunks")
+            
             # Generate embeddings for all chunks
             embeddings = cls.generate_embeddings(chunks)
+            print(f"Generated {len(embeddings)} embeddings")
             
             # Prepare vectors for upsert
             vectors = []
@@ -170,11 +173,15 @@ class EmbeddingService:
             batch_size = 100
             for i in range(0, len(vectors), batch_size):
                 batch = vectors[i:i + batch_size]
+                print(f"Upserting batch {i//batch_size + 1}: {len(batch)} vectors to namespace '{user_id}'")
                 index.upsert(vectors=batch, namespace=user_id)
             
+            print(f"Successfully stored {len(vectors)} vectors for document {document_id}")
             return True
         except Exception as e:
             print(f"Error storing embeddings: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     @classmethod
@@ -200,8 +207,11 @@ class EmbeddingService:
         try:
             index = cls.get_pinecone_index()
             
+            print(f"Searching for query: '{query}' in namespace '{user_id}'")
+            
             # Generate query embedding
             query_embedding = cls.generate_embedding(query)
+            print(f"Generated query embedding with dimension: {len(query_embedding)}")
             
             # Search in user's namespace
             results = index.query(
@@ -211,9 +221,12 @@ class EmbeddingService:
                 include_metadata=True
             )
             
+            print(f"Pinecone returned {len(results.get('matches', []))} matches")
+            
             # Filter by score threshold and format results
             matches = []
             for match in results.get('matches', []):
+                print(f"  Match: id={match['id']}, score={match['score']:.4f}")
                 if match['score'] >= score_threshold:
                     matches.append({
                         'id': match['id'],
@@ -224,9 +237,12 @@ class EmbeddingService:
                         'text': match['metadata'].get('full_text') or match['metadata'].get('text'),
                     })
             
+            print(f"Filtered to {len(matches)} matches above threshold {score_threshold}")
             return matches
         except Exception as e:
             print(f"Error searching embeddings: {e}")
+            import traceback
+            traceback.print_exc()
             return []
     
     @classmethod

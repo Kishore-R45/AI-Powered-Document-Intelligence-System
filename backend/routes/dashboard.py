@@ -145,3 +145,24 @@ def get_expiry_timeline():
             timeline['later'].append(Document.to_dict(doc))
     
     return success_response(data={'timeline': timeline})
+
+
+@dashboard_bp.route('/trigger-expiry-check', methods=['POST'])
+@require_auth
+@handle_errors
+def trigger_expiry_check():
+    """
+    Manually trigger the expiry reminder job.
+    Useful for testing expiry notifications.
+    
+    Response:
+        - reminders_sent: Number of reminders sent
+    """
+    from jobs.expiry_reminder import ExpiryReminderJob
+    
+    result = ExpiryReminderJob.run()
+    
+    return success_response(
+        data={'reminders_sent': result},
+        message=f"Expiry check completed. {result} reminders sent."
+    )

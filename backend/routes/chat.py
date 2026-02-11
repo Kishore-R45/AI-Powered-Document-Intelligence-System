@@ -10,6 +10,7 @@ from models.chat_history import ChatHistory
 from models.audit_log import AuditLog
 from services.embedding_service import EmbeddingService
 from services.qa_service import QAService
+from services.s3_service import S3Service
 from utils.decorators import require_auth, handle_errors
 from utils.responses import success_response, error_response
 
@@ -75,12 +76,14 @@ def query():
         })
     
     # Search for relevant chunks using vector similarity
+    print(f"Searching for relevant chunks for user {g.user_id}")
     relevant_chunks = EmbeddingService.search_similar(
         user_id=g.user_id,
         query=question,
         top_k=5,
-        score_threshold=0.3
+        score_threshold=0.1  # Lowered threshold for debugging
     )
+    print(f"Found {len(relevant_chunks)} relevant chunks")
     
     if not relevant_chunks:
         not_found_answer = "Not found in document"
@@ -116,7 +119,7 @@ def query():
         min_confidence=0.1
     )
     
-    # Format sources for response
+    # Format sources for response with presigned S3 URLs
     sources = []
     seen_docs = set()
     
@@ -124,9 +127,15 @@ def query():
         doc_id = source.get('documentId')
         if doc_id and doc_id not in seen_docs:
             seen_docs.add(doc_id)
+            # Fetch document to get S3 key and generate presigned URL
+            doc = Document.find_by_id(doc_id)
+            view_url = None
+            if doc and doc.get('s3_key'):
+                view_url = S3Service.get_presigned_url(doc['s3_key'], for_download=False)
             sources.append({
                 'documentId': doc_id,
-                'documentName': source.get('documentName', 'Unknown')
+                'documentName': source.get('documentName', 'Unknown'),
+                'viewUrl': view_url
             })
     
     # If no sources from QA result, add from relevant chunks
@@ -135,9 +144,15 @@ def query():
             doc_id = chunk.get('document_id')
             if doc_id and doc_id not in seen_docs:
                 seen_docs.add(doc_id)
+                # Fetch document to get S3 key and generate presigned URL
+                doc = Document.find_by_id(doc_id)
+                view_url = None
+                if doc and doc.get('s3_key'):
+                    view_url = S3Service.get_presigned_url(doc['s3_key'], for_download=False)
                 sources.append({
                     'documentId': doc_id,
-                    'documentName': chunk.get('document_name', 'Unknown')
+                    'documentName': chunk.get('document_name', 'Unknown'),
+                    'viewUrl': view_url
                 })
     
     answer = result.get('answer', 'Not found in document')
