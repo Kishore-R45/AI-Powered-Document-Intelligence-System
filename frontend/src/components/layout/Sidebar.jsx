@@ -25,7 +25,7 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-neutral-200 min-h-[calc(100vh-4rem)]">
+    <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-neutral-200 sticky top-16 h-[calc(100vh-4rem)] self-start overflow-y-auto">
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map(({ path, label, icon: Icon }) => (
           <NavLink
