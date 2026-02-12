@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Input from '../common/Input';
 import Button from '../common/Button';
+import ReCaptcha from '../common/ReCaptcha';
 import { validateEmail, validatePassword } from '../../utils/validators';
 import { ROUTES } from '../../utils/constants';
 
@@ -17,6 +18,8 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,6 +36,7 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
     const passwordError = formData.password ? '' : 'Password is required';
     if (emailError) newErrors.email = emailError;
     if (passwordError) newErrors.password = passwordError;
+    if (!captchaToken) newErrors.captcha = 'Please complete the captcha';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -40,8 +44,20 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      onSubmit(formData);
+      onSubmit({ ...formData, captchaToken });
     }
+  };
+  
+  const handleCaptchaChange = (token) => {
+    setCaptchaToken(token);
+    if (errors.captcha) {
+      setErrors((prev) => ({ ...prev, captcha: '' }));
+    }
+  };
+  
+  const handleCaptchaExpired = () => {
+    setCaptchaToken('');
+    setErrors((prev) => ({ ...prev, captcha: 'Captcha expired. Please verify again.' }));
   };
 
   return (
@@ -88,9 +104,16 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
         autoComplete="current-password"
       />
 
-      {/* CAPTCHA placeholder - integrate with actual CAPTCHA service */}
-      <div className="p-4 border border-neutral-200 rounded-lg bg-neutral-50 text-center text-sm text-neutral-500">
-        CAPTCHA verification will be rendered here
+      {/* reCAPTCHA */}
+      <div>
+        <ReCaptcha
+          ref={recaptchaRef}
+          onChange={handleCaptchaChange}
+          onExpired={handleCaptchaExpired}
+        />
+        {errors.captcha && (
+          <p className="mt-1 text-sm text-error-600">{errors.captcha}</p>
+        )}
       </div>
 
       <Button type="submit" variant="primary" fullWidth loading={loading}>

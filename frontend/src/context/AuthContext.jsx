@@ -54,13 +54,12 @@ export function AuthProvider({ children }) {
    * Login with email and password.
    * Stores token and user data on success.
    *
-   * @param {string} email
-   * @param {string} password
+   * @param {object} credentials - { email, password, captchaToken }
    * @returns {Promise<{success: boolean, error?: string}>}
    */
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (credentials) => {
     try {
-      const response = await api.post(ENDPOINTS.AUTH.LOGIN, { email, password });
+      const response = await api.post(ENDPOINTS.AUTH.LOGIN, credentials);
       const { token, user: userData } = response.data;
 
       setToken(token);

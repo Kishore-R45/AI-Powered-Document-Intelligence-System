@@ -41,6 +41,12 @@ def signup():
     name = data.get('name', '').strip()
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
+    captcha_token = data.get('captchaToken', '')
+    
+    # Verify captcha
+    captcha_valid, captcha_error = CaptchaService.verify(captcha_token, request.remote_addr)
+    if not captcha_valid:
+        return error_response(captcha_error or "Captcha verification failed", 400)
     
     # Validate inputs
     valid, error = Validators.validate_name(name)

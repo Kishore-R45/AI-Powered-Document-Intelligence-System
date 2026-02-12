@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
 import Input from '../common/Input';
 import Button from '../common/Button';
 import PasswordStrengthBar from '../common/PasswordStrengthBar';
+import ReCaptcha from '../common/ReCaptcha';
 import { validateEmail, validatePassword, validateConfirmPassword, validateName } from '../../utils/validators';
 import { ROUTES } from '../../utils/constants';
 
@@ -24,6 +25,8 @@ export default function SignupForm({ onSubmit, loading = false, serverError = ''
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,6 +47,7 @@ export default function SignupForm({ onSubmit, loading = false, serverError = ''
     if (emailError) newErrors.email = emailError;
     if (passwordError) newErrors.password = passwordError;
     if (confirmError) newErrors.confirmPassword = confirmError;
+    if (!captchaToken) newErrors.captcha = 'Please complete the captcha';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -56,8 +60,21 @@ export default function SignupForm({ onSubmit, loading = false, serverError = ''
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        captchaToken,
       });
     }
+  };
+  
+  const handleCaptchaChange = (token) => {
+    setCaptchaToken(token);
+    if (errors.captcha) {
+      setErrors((prev) => ({ ...prev, captcha: '' }));
+    }
+  };
+  
+  const handleCaptchaExpired = () => {
+    setCaptchaToken('');
+    setErrors((prev) => ({ ...prev, captcha: 'Captcha expired. Please verify again.' }));
   };
 
   return (
@@ -142,6 +159,18 @@ export default function SignupForm({ onSubmit, loading = false, serverError = ''
         }
         autoComplete="new-password"
       />
+
+      {/* reCAPTCHA */}
+      <div>
+        <ReCaptcha
+          ref={recaptchaRef}
+          onChange={handleCaptchaChange}
+          onExpired={handleCaptchaExpired}
+        />
+        {errors.captcha && (
+          <p className="mt-1 text-sm text-error-600">{errors.captcha}</p>
+        )}
+      </div>
 
       <Button type="submit" variant="primary" fullWidth loading={loading}>
         Create account
