@@ -16,7 +16,7 @@ export default function LoginPage() {
     setLoading(true);
     setServerError('');
 
-    const result = await login(formData.email, formData.password);
+    const result = await login(formData);
 
     if (!result.success) {
       setServerError(result.error);
