@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Environment variables (will be set in HF Spaces)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing
+.tox/
+.pytest_cache/
+.coverage
+
+# Documentation
+*.md
+!README.md
+!README.space.md
+docs/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker helper scripts
+docker-run.sh
+docker-run.ps1
+Dockerfile.dev

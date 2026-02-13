@@ -146,6 +146,8 @@ if __name__ == '__main__':
     
     # Run the application
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
-    port = int(os.getenv('PORT', 5000))
+    # Default to 7860 for Hugging Face Spaces, fallback to 5000
+    port = int(os.getenv('PORT', 7860))
+    host = os.getenv('HOST', '0.0.0.0')
     
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    app.run(host=host, port=port, debug=debug)
