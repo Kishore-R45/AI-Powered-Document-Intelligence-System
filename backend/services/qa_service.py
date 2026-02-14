@@ -86,8 +86,8 @@ QUESTION: {question}"""
             print(f"Sending query to HF Inference API ({cls.MODEL_ID})...")
             
             response = client.chat_completion(
-                model=cls.MODEL_ID,
                 messages=messages,
+                model=cls.MODEL_ID,
                 max_tokens=500,
                 temperature=0.1,
                 top_p=0.9,
@@ -119,8 +119,8 @@ QUESTION: {question}"""
             try:
                 print("Trying fallback model: mistralai/Mistral-7B-Instruct-v0.3...")
                 response = client.chat_completion(
-                    model="mistralai/Mistral-7B-Instruct-v0.3",
                     messages=messages,
+                    model="mistralai/Mistral-7B-Instruct-v0.3",
                     max_tokens=500,
                     temperature=0.1,
                     top_p=0.9,
