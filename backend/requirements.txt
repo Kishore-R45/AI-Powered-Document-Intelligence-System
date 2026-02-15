@@ -23,10 +23,10 @@ pinecone-client==3.0.0
 
 # Hugging Face ML Models
 transformers==4.38.2
-sentence-transformers==2.2.2
+sentence-transformers==3.0.1
 torch==2.1.2
 accelerate==0.27.2
-huggingface_hub==0.26.0
+huggingface_hub==0.25.2
 numpy<2
 
 # PDF Processing
