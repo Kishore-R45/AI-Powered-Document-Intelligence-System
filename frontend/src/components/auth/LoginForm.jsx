@@ -21,6 +21,9 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
   const [captchaToken, setCaptchaToken] = useState('');
   const recaptchaRef = useRef(null);
 
+  // Skip captcha on localhost (Google reCAPTCHA doesn't support localhost)
+  const isLocalhost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -36,7 +39,7 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
     const passwordError = formData.password ? '' : 'Password is required';
     if (emailError) newErrors.email = emailError;
     if (passwordError) newErrors.password = passwordError;
-    if (!captchaToken) newErrors.captcha = 'Please complete the captcha';
+    if (!isLocalhost && !captchaToken) newErrors.captcha = 'Please complete the captcha';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -44,7 +47,7 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      onSubmit({ ...formData, captchaToken });
+      onSubmit({ ...formData, captchaToken: isLocalhost ? 'localhost-bypass' : captchaToken });
     }
   };
   
@@ -104,17 +107,19 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
         autoComplete="current-password"
       />
 
-      {/* reCAPTCHA */}
-      <div>
-        <ReCaptcha
-          ref={recaptchaRef}
-          onChange={handleCaptchaChange}
-          onExpired={handleCaptchaExpired}
-        />
-        {errors.captcha && (
-          <p className="mt-1 text-sm text-error-600">{errors.captcha}</p>
-        )}
-      </div>
+      {/* reCAPTCHA - hidden on localhost */}
+      {!isLocalhost && (
+        <div>
+          <ReCaptcha
+            ref={recaptchaRef}
+            onChange={handleCaptchaChange}
+            onExpired={handleCaptchaExpired}
+          />
+          {errors.captcha && (
+            <p className="mt-1 text-sm text-error-600">{errors.captcha}</p>
+          )}
+        </div>
+      )}
 
       <Button type="submit" variant="primary" fullWidth loading={loading}>
         Sign in

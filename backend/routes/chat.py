@@ -5,6 +5,7 @@ CRITICAL: This endpoint uses ONLY extractive QA - NO generative AI.
 
 from flask import Blueprint, request, g
 
+from config import Config
 from models.document import Document
 from models.chat_history import ChatHistory
 from models.audit_log import AuditLog
@@ -75,13 +76,13 @@ def query():
             'sources': []
         })
     
-    # Search for relevant chunks using vector similarity
+    # Search for relevant chunks using hybrid retrieval (semantic + keyword boost)
     print(f"Searching for relevant chunks for user {g.user_id}")
     relevant_chunks = EmbeddingService.search_similar(
         user_id=g.user_id,
         query=question,
-        top_k=5,
-        score_threshold=0.1  # Lowered threshold for debugging
+        top_k=Config.RAG_TOP_K,
+        score_threshold=Config.RAG_SCORE_THRESHOLD
     )
     print(f"Found {len(relevant_chunks)} relevant chunks")
     

@@ -30,6 +30,9 @@ const ENDPOINTS = {
     MARK_READ: (id) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/read-all',
   },
+  DASHBOARD: {
+    STATS: '/dashboard/stats',
+  },
 };
 
 export default ENDPOINTS;

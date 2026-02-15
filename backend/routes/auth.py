@@ -28,6 +28,7 @@ def signup():
         - name: User's full name
         - email: User's email address
         - password: User's password
+        - captchaToken: (optional) reCAPTCHA token
         
     Response:
         - message: Success message
@@ -43,9 +44,10 @@ def signup():
     password = data.get('password', '')
     captcha_token = data.get('captchaToken', '')
     
-    # Verify captcha
+    # Verify captcha (skips automatically for localhost)
     captcha_valid, captcha_error = CaptchaService.verify(captcha_token, request.remote_addr)
     if not captcha_valid:
+        print(f"[Signup] Captcha failed for {email}: {captcha_error}")
         return error_response(captcha_error or "Captcha verification failed", 400)
     
     # Validate inputs
@@ -62,29 +64,52 @@ def signup():
         return error_response(error, 400)
     
     # Check if user already exists
-    if User.exists(email):
-        existing_user = User.find_by_email(email)
-        if existing_user and existing_user.get('is_active'):
-            return error_response("An account with this email already exists", 409)
-        else:
-            # User exists but not activated - allow re-registration
-            # Delete old user and OTPs
-            from models import mongo
-            mongo.db.users.delete_one({'email': email})
-            OTP.delete_for_email(email)
+    try:
+        if User.exists(email):
+            existing_user = User.find_by_email(email)
+            if existing_user and existing_user.get('is_active'):
+                return error_response("An account with this email already exists", 409)
+            else:
+                # User exists but not activated - allow re-registration
+                # Delete old user and OTPs
+                from models import mongo
+                mongo.db.users.delete_one({'email': email})
+                OTP.delete_for_email(email)
+    except Exception as e:
+        print(f"[Signup] Error checking existing user: {e}")
+        return error_response("Database error during registration. Please try again.", 500)
     
     # Create user (inactive until OTP verification)
-    user = User.create(name=name, email=email, password=password, is_active=False)
+    try:
+        user = User.create(name=name, email=email, password=password, is_active=False)
+    except Exception as e:
+        print(f"[Signup] Error creating user: {e}")
+        import traceback
+        traceback.print_exc()
+        return error_response("Failed to create account. Please try again.", 500)
     
     # Generate and send OTP
-    otp = OTP.create(email)
-    email_sent = EmailService.send_otp(email, otp['code'], name)
-    
-    if not email_sent:
-        # Clean up user if email fails
+    try:
+        otp = OTP.create(email)
+        email_sent = EmailService.send_otp(email, otp['code'], name)
+        
+        if not email_sent:
+            print(f"[Signup] Failed to send OTP email to {email}")
+            # Clean up user if email fails
+            from models import mongo
+            mongo.db.users.delete_one({'_id': user['_id']})
+            OTP.delete_for_email(email)
+            return error_response("Failed to send verification email. Please check your email address and try again.", 500)
+    except Exception as e:
+        print(f"[Signup] Error in OTP/email flow: {e}")
+        import traceback
+        traceback.print_exc()
+        # Clean up user if OTP/email fails
         from models import mongo
-        mongo.db.users.delete_one({'_id': user['_id']})
-        OTP.delete_for_email(email)
+        try:
+            mongo.db.users.delete_one({'_id': user['_id']})
+        except:
+            pass
         return error_response("Failed to send verification email. Please try again.", 500)
     
     # Log signup attempt

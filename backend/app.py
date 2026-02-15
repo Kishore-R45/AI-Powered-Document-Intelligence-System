@@ -35,6 +35,16 @@ def create_app(config_class=None):
     # Initialize database
     init_db(app)
     
+    # Pre-load embedding model to avoid download during first request
+    print("[Init] Pre-loading embedding model...")
+    try:
+        from services.embedding_service import EmbeddingService
+        EmbeddingService.get_model()
+        print("✓ Embedding model pre-loaded successfully")
+    except Exception as e:
+        print(f"✗ Failed to pre-load embedding model: {e}")
+        print("  Model will be loaded on first use instead")
+    
     # Register blueprints
     register_routes(app)
     
@@ -96,28 +106,55 @@ def create_app(config_class=None):
 def init_scheduler(app):
     """
     Initialize background job scheduler.
+    Runs expiry check on startup and schedules daily checks.
     
     Args:
         app: Flask application
     """
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
     from jobs.expiry_reminder import ExpiryReminderJob
     
     scheduler = BackgroundScheduler()
     
-    # Run expiry reminder job daily at 8 AM UTC
+    def run_with_context():
+        """Run expiry reminder within Flask app context."""
+        with app.app_context():
+            try:
+                ExpiryReminderJob.run()
+            except Exception as e:
+                print(f"Error running expiry reminder job: {e}")
+    
+    def check_expired_with_context():
+        """Run expired check within Flask app context."""
+        with app.app_context():
+            try:
+                ExpiryReminderJob.check_expired()
+            except Exception as e:
+                print(f"Error running expired check job: {e}")
+    
+    # Run expiry reminder job every 6 hours (more frequent than daily for reliability)
     scheduler.add_job(
-        func=ExpiryReminderJob.run,
-        trigger=CronTrigger(hour=8, minute=0),
+        func=run_with_context,
+        trigger=IntervalTrigger(hours=6),
         id='expiry_reminder_job',
         name='Check document expiry and send reminders',
         replace_existing=True
     )
     
+    # Also run daily at 8 AM UTC
+    scheduler.add_job(
+        func=run_with_context,
+        trigger=CronTrigger(hour=8, minute=0),
+        id='expiry_reminder_daily_job',
+        name='Daily expiry reminder check',
+        replace_existing=True
+    )
+    
     # Run expired check daily at 9 AM UTC
     scheduler.add_job(
-        func=ExpiryReminderJob.check_expired,
+        func=check_expired_with_context,
         trigger=CronTrigger(hour=9, minute=0),
         id='expired_check_job',
         name='Check for expired documents',
@@ -125,6 +162,16 @@ def init_scheduler(app):
     )
     
     scheduler.start()
+    
+    # Run once on startup (after a short delay to allow app to initialize)
+    import threading
+    def startup_check():
+        import time
+        time.sleep(5)  # Wait for app to fully start
+        run_with_context()
+    
+    startup_thread = threading.Thread(target=startup_check, daemon=True)
+    startup_thread.start()
     
     # Shut down the scheduler when the app is shutting down
     import atexit
@@ -136,13 +183,17 @@ def init_scheduler(app):
 # Create the application
 app = create_app()
 
+# Initialize scheduler for all environments (not just __main__)
+# This ensures it works with gunicorn, wsgi, etc.
+try:
+    _scheduler = init_scheduler(app)
+    print("✓ Background scheduler initialized")
+except Exception as e:
+    print(f"✗ Failed to initialize scheduler: {e}")
+
 
 if __name__ == '__main__':
     import os
-    
-    # Initialize scheduler in production
-    if os.getenv('FLASK_ENV') == 'production':
-        init_scheduler(app)
     
     # Run the application
     debug = os.getenv('FLASK_DEBUG', '0') == '1'

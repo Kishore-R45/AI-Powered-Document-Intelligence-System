@@ -16,6 +16,7 @@ class Notification:
     
     # Notification types
     TYPE_UPLOAD = 'upload'
+    TYPE_DELETE = 'delete'
     TYPE_EXPIRY_REMINDER = 'expiry_reminder'
     TYPE_EXPIRED = 'expired'
     TYPE_SECURITY = 'security'
@@ -118,6 +119,8 @@ class Notification:
         """Convert notification to dictionary."""
         if not notification:
             return None
+        created_at = notification.get('created_at')
+        created_at_iso = created_at.isoformat() if created_at else None
         return {
             'id': str(notification['_id']),
             'type': notification.get('type'),
@@ -126,5 +129,6 @@ class Notification:
             'document_id': str(notification['document_id']) if notification.get('document_id') else None,
             'metadata': notification.get('metadata', {}),
             'read': notification.get('read', False),
-            'created_at': notification.get('created_at').isoformat() if notification.get('created_at') else None,
+            'created_at': created_at_iso,
+            'timestamp': created_at_iso,
         }

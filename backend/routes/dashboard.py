@@ -1,6 +1,6 @@
 """
 Dashboard routes.
-Provides statistics and overview data.
+Provides statistics, overview data, and recent activity.
 """
 
 from flask import Blueprint, request, g
@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from models.document import Document
 from models.notification import Notification
+from models.audit_log import AuditLog
 from utils.decorators import require_auth, handle_errors
 from utils.responses import success_response
 
@@ -46,6 +47,23 @@ def get_stats():
     # Get unread notification count
     unread_notifications = Notification.count_unread(g.user_id)
     
+    # Get recent activity from audit logs (uploads + deletes + views)
+    recent_activities = AuditLog.find_by_user(g.user_id, limit=20)
+    activity_list = []
+    for log in recent_activities:
+        action = log.get('action')
+        details = log.get('details', {})
+        if action in ['document_upload', 'document_delete', 'document_view']:
+            activity_type = 'upload' if action == 'document_upload' else ('delete' if action == 'document_delete' else 'view')
+            activity_list.append({
+                'id': str(log['_id']),
+                'type': activity_type,
+                'documentName': details.get('document_name', 'Unknown'),
+                'timestamp': log.get('created_at').isoformat() if log.get('created_at') else None,
+            })
+        if len(activity_list) >= 10:
+            break
+    
     return success_response(data={
         'totalDocuments': total_documents,
         'documentsWithExpiry': documents_with_expiry,
@@ -53,6 +71,7 @@ def get_stats():
         'expiringIn7Days': expiring_7_days,
         'expiredDocuments': expired,
         'recentUploads': [Document.to_dict(doc) for doc in recent],
+        'recentActivity': activity_list,
         'unreadNotifications': unread_notifications
     })
 

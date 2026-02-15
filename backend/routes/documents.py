@@ -108,23 +108,8 @@ def upload_document():
         extracted_text=extracted_text
     )
     
-    # Generate embeddings and store in Pinecone
-    if extracted_text:
-        print(f"Extracted text length: {len(extracted_text)} characters")
-        chunks = EmbeddingService.chunk_text(extracted_text)
-        print(f"Created {len(chunks)} chunks from extracted text")
-        if chunks:
-            success = EmbeddingService.store_embeddings(
-                user_id=g.user_id,
-                document_id=str(document['_id']),
-                document_name=name,
-                chunks=chunks
-            )
-            print(f"Embedding storage {'succeeded' if success else 'failed'}")
-    else:
-        print("No text extracted from document")
-    
-    # Create upload notification
+    # Create upload notification IMMEDIATELY (before embeddings)
+    # This ensures user gets notified even if embedding generation times out
     Notification.create(
         user_id=g.user_id,
         notification_type=Notification.TYPE_UPLOAD,
@@ -143,6 +128,30 @@ def upload_document():
             'document_type': doc_type
         }
     )
+    
+    # Generate embeddings and store in Pinecone (after notification/audit)
+    # This is async-safe - if it times out, upload still succeeded
+    embedding_success = False
+    if extracted_text:
+        print(f"Extracted text length: {len(extracted_text)} characters")
+        try:
+            chunks = EmbeddingService.chunk_text(extracted_text)
+            print(f"Created {len(chunks)} chunks from extracted text")
+            if chunks:
+                embedding_success = EmbeddingService.store_embeddings(
+                    user_id=g.user_id,
+                    document_id=str(document['_id']),
+                    document_name=name,
+                    chunks=chunks
+                )
+                print(f"Embedding storage {'succeeded' if embedding_success else 'failed'}")
+        except Exception as embedding_error:
+            print(f"Error generating/storing embeddings: {embedding_error}")
+            import traceback
+            traceback.print_exc()
+            # Don't fail the upload if embeddings fail - document is already saved
+    else:
+        print("No text extracted from document")
     
     return success_response(
         data={'document': Document.to_dict(document)},
@@ -315,6 +324,15 @@ def delete_document(document_id):
     
     # Delete from MongoDB
     Document.delete(document_id, g.user_id)
+    
+    # Create delete notification
+    Notification.create(
+        user_id=g.user_id,
+        notification_type=Notification.TYPE_DELETE,
+        title="Document Deleted",
+        message=f"'{document_name}' has been deleted from your vault.",
+        document_id=document_id
+    )
     
     # Log deletion
     AuditLog.log(

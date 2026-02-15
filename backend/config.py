@@ -61,8 +61,14 @@ class Config:
     ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png', 'webp'}
     
     # AI Models
-    EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
+    EMBEDDING_MODEL = 'sentence-transformers/all-mpnet-base-v2'  # 768-dim, superior quality
     QA_MODEL = 'meta-llama/Llama-3.1-8B-Instruct'  # Local model via transformers
+    
+    # RAG Configuration
+    CHUNK_SIZE = 800       # Characters per chunk
+    CHUNK_OVERLAP = 200    # Overlap between chunks
+    RAG_TOP_K = 8          # Chunks to retrieve
+    RAG_SCORE_THRESHOLD = 0.3  # Minimum similarity score
     
     # CORS
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',')

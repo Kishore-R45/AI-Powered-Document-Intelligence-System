@@ -16,7 +16,7 @@ class MongoWrapper:
         self.db = None
     
     def init_app(self, app):
-        """Initialize MongoDB connection with custom SSL context."""
+        """Initialize MongoDB connection with custom SSL context and retries."""
         mongo_uri = app.config['MONGO_URI']
         try:
             # Use certifi for SSL/TLS certificates on Windows
@@ -28,27 +28,47 @@ class MongoWrapper:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl_lib.CERT_NONE
             
-            # PyMongo 4.x connection
+            # PyMongo 4.x connection with better timeout settings and retries
             self.client = MongoClient(
                 mongo_uri,
                 tls=True,
                 tlsAllowInvalidCertificates=True,
                 tlsCAFile=certifi.where(),
-                serverSelectionTimeoutMS=30000,
-                connectTimeoutMS=30000,
-                socketTimeoutMS=30000
+                serverSelectionTimeoutMS=10000,  # Reduced to 10s for faster failure
+                connectTimeoutMS=10000,
+                socketTimeoutMS=10000,
+                retryWrites=True,
+                retryReads=True,
+                maxPoolSize=50,
+                minPoolSize=10,
             )
             
             # Get database name from URI or use default
             db_name = mongo_uri.split('/')[-1].split('?')[0] or 'infovault'
             self.db = self.client[db_name]
             
-            # Test connection
-            self.client.admin.command('ping')
-            print(f"✓ Connected to MongoDB: {db_name}")
+            # Test connection with retry
+            retry_count = 3
+            for attempt in range(retry_count):
+                try:
+                    self.client.admin.command('ping')
+                    print(f"✓ Connected to MongoDB: {db_name}")
+                    break
+                except Exception as ping_error:
+                    if attempt < retry_count - 1:
+                        print(f"  MongoDB connection attempt {attempt + 1} failed, retrying...")
+                        import time
+                        time.sleep(2)
+                    else:
+                        raise ping_error
             
         except Exception as e:
             print(f"✗ MongoDB connection failed: {e}")
+            print(f"  This could be due to:")
+            print(f"  1. No internet connection")
+            print(f"  2. MongoDB Atlas IP whitelist restrictions")
+            print(f"  3. Firewall blocking MongoDB connections")
+            print(f"  4. MongoDB Atlas cluster is paused")
             # Don't raise, allow app to start but warn
     
     def get_db(self):

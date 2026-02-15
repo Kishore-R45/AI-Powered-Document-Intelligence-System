@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -16,6 +16,8 @@ import useAuth from '../hooks/useAuth';
 import useDocuments from '../hooks/useDocuments';
 import { ROUTES } from '../utils/constants';
 import { isExpiringSoon, isExpired } from '../utils/formatters';
+import api from '../api/axios';
+import ENDPOINTS from '../api/endpoints';
 
 /**
  * Dashboard page.
@@ -25,9 +27,19 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { documents, loading, fetchDocuments } = useDocuments();
   const navigate = useNavigate();
+  const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
     fetchDocuments();
+    // Fetch dashboard stats (includes activity feed from audit logs)
+    api.get(ENDPOINTS.DASHBOARD.STATS)
+      .then((res) => {
+        const activities = res.data?.data?.recentActivity || [];
+        setRecentActivity(activities);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch dashboard stats:', err);
+      });
   }, [fetchDocuments]);
 
   /**
@@ -47,17 +59,6 @@ export default function DashboardPage() {
     .slice()
     .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
     .slice(0, 5);
-
-  /**
-   * Build recent activity from recent uploads.
-   * In production, this would come from a dedicated activity API endpoint.
-   */
-  const recentActivity = recentUploads.map((doc) => ({
-    id: doc.id,
-    type: 'upload',
-    documentName: doc.name,
-    timestamp: doc.uploadDate,
-  }));
 
   if (loading && documents.length === 0) {
     return (
