@@ -37,11 +37,19 @@
 2. Create a new token with `read` permissions
 3. Save the token securely
 
-### Email SMTP
-For Gmail:
-1. Enable 2-factor authentication
-2. Generate an App Password: [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-3. Use your Gmail address and app password
+### Email Service (IMPORTANT for HF Spaces)
+
+**⚠️ Hugging Face Spaces blocks SMTP ports (587/465)**, so traditional email won't work.
+
+**Use Resend API instead (Recommended):**
+1. Sign up at [resend.com](https://resend.com) - **Free tier: 100 emails/day**
+2. Verify your email and get API key
+3. Use `onboarding@resend.dev` as from-email (no domain setup needed)
+4. Or verify your own domain for branded emails
+
+**Alternative (For testing only):**
+- Gmail SMTP only works locally, not on HF Spaces
+- For production, you MUST use an HTTP-based email API
 
 ### Google reCAPTCHA (Optional)
 1. Go to [google.com/recaptcha/admin](https://www.google.com/recaptcha/admin)
@@ -112,12 +120,16 @@ PINECONE_INDEX_NAME=infovault-docs
 # Hugging Face
 HUGGINGFACE_TOKEN=hf_...
 
-# Email (Gmail example)
+# Email - IMPORTANT: Use Resend for HF Spaces (SMTP blocked)
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+RESEND_FROM_EMAIL=onboarding@resend.dev
+EMAIL_FROM_NAME=InfoVault
+
+# (Optional) Gmail SMTP - only works locally, NOT on HF Spaces
 EMAIL_USERNAME=your-email@gmail.com
 EMAIL_PASSWORD=your-app-password
 EMAIL_SMTP_HOST=smtp.gmail.com
 EMAIL_SMTP_PORT=587
-EMAIL_FROM_NAME=InfoVault
 
 # Flask
 FLASK_ENV=production
