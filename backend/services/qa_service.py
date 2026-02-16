@@ -1,13 +1,11 @@
 """
 Professional-grade Question Answering service using Hugging Face Inference API.
-
 Architecture:
 1. Structured Extraction Layer: Regex-based extraction for PAN, dates, IDs, GPAs
    → Deterministic, no hallucination, instant results for structured queries
 2. LLM Answer Generation: HuggingFace Inference API for complex/natural language queries
 3. Answer Verification Layer: Validates LLM answers against source context
 4. Context Assembly: Smart chunk merging with 4000 char limit
-
 All answers are grounded in document context. No hallucination.
 """
 
@@ -403,12 +401,9 @@ class QAService:
         
         user_message = f"""DOCUMENT CONTEXT:
 {context}
-
 AVAILABLE SOURCE DOCUMENTS:
 {sources_str}
-
 QUESTION: {question}
-
 ANSWER (extract directly from context):"""
         
         messages = [
