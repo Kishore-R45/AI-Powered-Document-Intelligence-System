@@ -46,7 +46,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 text-lg text-neutral-600 max-w-2xl mx-auto text-balance animate-fade-in animation-delay-100">
-              Securely upload personal documents — IDs, certificates, insurance policies —
+              Securely upload personal documents - IDs, certificates, insurance policies -
               and retrieve verified information instantly through intelligent queries.
               No hallucinations. Only facts from your documents.
             </p>
