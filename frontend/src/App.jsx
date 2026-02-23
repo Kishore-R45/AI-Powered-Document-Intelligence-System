@@ -19,6 +19,7 @@ import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 /**
  * Root application component.
@@ -35,6 +36,7 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             </Route>
 
             {/* Protected routes wrapped in AppLayout */}

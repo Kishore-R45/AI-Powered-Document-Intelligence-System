@@ -9,6 +9,9 @@ const ENDPOINTS = {
     VERIFY_OTP: '/auth/verify-otp',
     LOGOUT: '/auth/logout',
     REFRESH: '/auth/refresh',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    VERIFY_RESET_OTP: '/auth/verify-reset-otp',
+    RESET_PASSWORD: '/auth/reset-password',
   },
   DOCUMENTS: {
     UPLOAD: '/documents/upload',
