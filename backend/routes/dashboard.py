@@ -47,18 +47,33 @@ def get_stats():
     # Get unread notification count
     unread_notifications = Notification.count_unread(g.user_id)
     
-    # Get recent activity from audit logs (uploads + deletes + views)
-    recent_activities = AuditLog.find_by_user(g.user_id, limit=20)
+    # Get recent activity from audit logs (uploads + deletes + views + queries)
+    recent_activities = AuditLog.find_by_user(g.user_id, limit=30)
     activity_list = []
     for log in recent_activities:
         action = log.get('action')
         details = log.get('details', {})
-        if action in ['document_upload', 'document_delete', 'document_view']:
-            activity_type = 'upload' if action == 'document_upload' else ('delete' if action == 'document_delete' else 'view')
+        if action in ['document_upload', 'document_delete', 'document_view', 'chat_query']:
+            action_type_map = {
+                'document_upload': 'upload',
+                'document_delete': 'delete',
+                'document_view': 'view',
+                'chat_query': 'query',
+            }
+            activity_type = action_type_map.get(action, 'view')
+            
+            # For chat queries, use the question as the display name
+            if action == 'chat_query':
+                doc_name = details.get('question', 'Document query')
+                if len(doc_name) > 50:
+                    doc_name = doc_name[:47] + '...'
+            else:
+                doc_name = details.get('document_name', 'Unknown')
+            
             activity_list.append({
                 'id': str(log['_id']),
                 'type': activity_type,
-                'documentName': details.get('document_name', 'Unknown'),
+                'documentName': doc_name,
                 'timestamp': log.get('created_at').isoformat() if log.get('created_at') else None,
             })
         if len(activity_list) >= 10:

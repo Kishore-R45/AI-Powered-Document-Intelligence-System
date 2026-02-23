@@ -34,7 +34,9 @@ export default function DashboardPage() {
     // Fetch dashboard stats (includes activity feed from audit logs)
     api.get(ENDPOINTS.DASHBOARD.STATS)
       .then((res) => {
-        const activities = res.data?.data?.recentActivity || [];
+        // success_response flattens dict onto root: res.data.recentActivity
+        const data = res.data || {};
+        const activities = data.recentActivity || data.data?.recentActivity || [];
         setRecentActivity(activities);
       })
       .catch((err) => {
