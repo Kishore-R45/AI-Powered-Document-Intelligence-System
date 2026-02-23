@@ -13,20 +13,23 @@ class JWTUtils:
     """JWT token management utilities."""
     
     @staticmethod
-    def generate_token(user_id: str, token_type: str = 'access') -> Tuple[str, str, datetime]:
+    def generate_token(user_id: str, token_type: str = 'access', expires_minutes: int = None) -> Tuple[str, str, datetime]:
         """
         Generate a JWT token.
         
         Args:
             user_id: User's ID
             token_type: 'access' or 'refresh'
+            expires_minutes: Override expiry in minutes (optional)
             
         Returns:
             Tuple of (token, jti, expiry_datetime)
         """
         jti = str(uuid.uuid4())
         
-        if token_type == 'refresh':
+        if expires_minutes:
+            expires_delta = timedelta(minutes=expires_minutes)
+        elif token_type == 'refresh':
             expires_delta = Config.JWT_REFRESH_TOKEN_EXPIRES
         else:
             expires_delta = Config.JWT_ACCESS_TOKEN_EXPIRES

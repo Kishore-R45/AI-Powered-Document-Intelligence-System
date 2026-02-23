@@ -16,7 +16,7 @@ class Session:
     collection_name = 'sessions'
     
     @staticmethod
-    def create(user_id: str, token_jti: str, expires_at: datetime = None) -> dict:
+    def create(user_id: str, token_jti: str, expires_at: datetime = None, ip_address: str = None, user_agent: str = None) -> dict:
         """
         Create a new session entry.
         
@@ -24,6 +24,8 @@ class Session:
             user_id: User's ID
             token_jti: JWT token ID (jti claim)
             expires_at: Token expiry time
+            ip_address: Client IP address
+            user_agent: Client user agent string
             
         Returns:
             Created session entry
@@ -37,6 +39,8 @@ class Session:
             'created_at': datetime.utcnow(),
             'expires_at': expires_at,
             'revoked': False,
+            'ip_address': ip_address,
+            'user_agent': user_agent,
         }
         
         result = mongo.db.sessions.insert_one(session)
@@ -90,3 +94,38 @@ class Session:
             'revoked': False,
             'expires_at': {'$gt': datetime.utcnow()}
         }).sort('created_at', -1))
+    
+    @staticmethod
+    def is_new_device(user_id: str, ip_address: str, user_agent: str) -> bool:
+        """
+        Check if this login is from a new/different device.
+        Compares IP + user agent with previous sessions.
+        Returns False if no previous sessions exist (new account).
+        
+        Args:
+            user_id: User's ID
+            ip_address: Client IP
+            user_agent: Client user agent string
+            
+        Returns:
+            True if this is a new device, False otherwise
+        """
+        # Check if user has any previous sessions at all
+        previous_sessions = list(mongo.db.sessions.find({
+            'user_id': ObjectId(user_id),
+        }).sort('created_at', -1).limit(20))
+        
+        if not previous_sessions:
+            # No previous sessions - first login after registration, not a new device alert
+            return False
+        
+        # Check if any previous session matches this IP + user agent combo
+        for session in previous_sessions:
+            prev_ip = session.get('ip_address')
+            prev_ua = session.get('user_agent')
+            
+            # Match on IP address or user agent (fuzzy - same browser family)
+            if prev_ip == ip_address and prev_ua == user_agent:
+                return False
+        
+        return True

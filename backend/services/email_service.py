@@ -353,3 +353,89 @@ class EmailService:
             subject="Your InfoVault Password Was Changed",
             html_content=html_content
         )
+    
+    @staticmethod
+    def send_login_alert(to_email: str, name: str = None, ip_address: str = None, user_agent: str = None) -> bool:
+        """
+        Send new device login alert email.
+        
+        Args:
+            to_email: Recipient email
+            name: User's name (optional)
+            ip_address: IP address of the login
+            user_agent: User agent string of the login
+            
+        Returns:
+            True if sent successfully
+        """
+        greeting = f"Hi {name}," if name else "Hi,"
+        
+        # Parse user agent to something readable
+        device_info = user_agent or "Unknown device"
+        if len(device_info) > 100:
+            device_info = device_info[:97] + "..."
+        
+        from datetime import datetime
+        login_time = datetime.utcnow().strftime("%B %d, %Y at %H:%M UTC")
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: #EF4444; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }}
+                .device-info {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #EF4444; }}
+                .alert {{ background: #FEF3C7; border: 1px solid #F59E0B; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>New Login Detected</h1>
+                </div>
+                <div class="content">
+                    <p>{greeting}</p>
+                    <p>Your InfoVault account was just accessed from a new device or location.</p>
+                    <div class="device-info">
+                        <p><strong>Time:</strong> {login_time}</p>
+                        <p><strong>IP Address:</strong> {ip_address or 'Unknown'}</p>
+                        <p><strong>Device:</strong> {device_info}</p>
+                    </div>
+                    <div class="alert">
+                        <p><strong>&#9888;&#65039; If this wasn't you:</strong></p>
+                        <p>Please change your password immediately and check your account for any unauthorized activity.</p>
+                    </div>
+                    <p>If you recognize this login, you can safely ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; InfoVault. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        {greeting}
+        
+        Your InfoVault account was just accessed from a new device or location.
+        
+        Time: {login_time}
+        IP Address: {ip_address or 'Unknown'}
+        Device: {device_info}
+        
+        If this wasn't you, please change your password immediately.
+        If you recognize this login, you can safely ignore this email.
+        """
+        
+        return EmailService.send_email(
+            to_email=to_email,
+            subject="New Login Alert - InfoVault Account",
+            html_content=html_content,
+            text_content=text_content
+        )

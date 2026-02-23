@@ -121,6 +121,15 @@ export default function LoginForm({ onSubmit, loading = false, serverError = '' 
         </div>
       )}
 
+      <div className="flex justify-end">
+        <Link
+          to={ROUTES.FORGOT_PASSWORD}
+          className="text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors"
+        >
+          Forgot password?
+        </Link>
+      </div>
+
       <Button type="submit" variant="primary" fullWidth loading={loading}>
         Sign in
       </Button>
