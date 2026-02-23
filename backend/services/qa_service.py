@@ -499,6 +499,72 @@ ANSWER (extract directly from context):"""
         
         return is_verified, score
     
+    # ==================== SOURCE IDENTIFICATION ====================
+    
+    @classmethod
+    def _find_answer_source(cls, answer: str, relevant_chunks: List[dict], sources: List[dict]) -> Optional[dict]:
+        """
+        Identify which specific document contains the answer text.
+        Searches through the relevant chunks to find which one contains
+        the answer or key parts of it, then returns the matching source.
+        
+        Args:
+            answer: The extracted/generated answer string
+            relevant_chunks: List of retrieved chunks
+            sources: List of unique source documents
+            
+        Returns:
+            The matching source dict, or None
+        """
+        if not answer or not relevant_chunks:
+            return None
+        
+        answer_lower = answer.lower().strip()
+        
+        # Extract key tokens from the answer (numbers, significant words)
+        answer_numbers = re.findall(r'\d+\.?\d*', answer)
+        stopwords = {'the', 'and', 'for', 'are', 'was', 'were', 'has', 'had', 'have',
+                     'been', 'not', 'but', 'its', 'his', 'her', 'our', 'your', 'this',
+                     'that', 'from', 'with', 'will', 'can', 'may', 'is', 'in', 'of', 'to', 'a'}
+        answer_words = [w for w in re.findall(r'[a-z]{3,}', answer_lower) if w not in stopwords]
+        
+        best_doc_id = None
+        best_score = 0
+        
+        for chunk in relevant_chunks:
+            text_lower = chunk.get('text', '').lower()
+            doc_id = chunk.get('document_id')
+            if not text_lower or not doc_id:
+                continue
+            
+            score = 0
+            
+            # Check if the full answer appears in the chunk
+            if answer_lower in text_lower:
+                score += 10
+            
+            # Check numbers (most important for factual answers)
+            for num in answer_numbers:
+                if num in text_lower:
+                    score += 3
+            
+            # Check key words
+            for word in answer_words:
+                if word in text_lower:
+                    score += 1
+            
+            if score > best_score:
+                best_score = score
+                best_doc_id = doc_id
+        
+        if best_doc_id:
+            for src in sources:
+                if src['documentId'] == best_doc_id:
+                    print(f"[QA] Source matched via answer content (score={best_score}): {src['documentName']}")
+                    return src
+        
+        return None
+    
     # ==================== MAIN QUERY PIPELINE ====================
     
     @classmethod
@@ -563,10 +629,12 @@ ANSWER (extract directly from context):"""
         
         if structured_answer:
             print(f"[QA] Using structured extraction result: {structured_answer}")
+            # Find which specific chunk/document contains the extracted answer
+            matched_source = cls._find_answer_source(structured_answer, relevant_chunks, sources)
             return {
                 'answer': structured_answer,
                 'found': True,
-                'sources': sources[:3],
+                'sources': [matched_source] if matched_source else sources[:1],
                 'confidence': 0.95  # High confidence for regex extraction
             }
         
@@ -608,19 +676,32 @@ ANSWER (extract directly from context):"""
                 # Still return the answer but with lower confidence
                 confidence = max(confidence, 0.2)
         
-        # Step 6: Filter sources to identified source document
-        if source_document and not is_not_found:
-            source_lower = source_document.lower()
-            filtered_sources = []
-            for src in sources:
-                if source_lower in src['documentName'].lower() or src['documentName'].lower() in source_lower:
-                    filtered_sources.append(src)
-                    break
+        # Step 6: Identify the single correct source document for the answer
+        if is_not_found:
+            sources = []
+        else:
+            matched_source = None
             
-            if not filtered_sources and sources:
-                filtered_sources = [sources[0]]
+            # First: try to match the LLM-identified source document name
+            if source_document:
+                source_lower = source_document.lower().strip()
+                for src in sources:
+                    src_name = src['documentName'].lower()
+                    if source_lower in src_name or src_name in source_lower:
+                        matched_source = src
+                        print(f"[QA] Source matched via LLM identification: {src['documentName']}")
+                        break
             
-            sources = filtered_sources
+            # Second: if LLM source didn't match, find which chunk contains the answer text
+            if not matched_source:
+                matched_source = cls._find_answer_source(answer, relevant_chunks, sources)
+            
+            # Fallback: use the top-ranked chunk's document (highest similarity)
+            if not matched_source and sources:
+                matched_source = sources[0]
+                print(f"[QA] Source fallback to top-ranked: {matched_source['documentName']}")
+            
+            sources = [matched_source] if matched_source else []
         
         return {
             'answer': answer,

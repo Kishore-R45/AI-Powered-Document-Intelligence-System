@@ -121,6 +121,7 @@ def query():
     )
     
     # Format sources for response with presigned S3 URLs
+    # process_query now returns only the single correct source document
     sources = []
     seen_docs = set()
     
@@ -139,22 +140,20 @@ def query():
                 'viewUrl': view_url
             })
     
-    # If no sources from QA result, add from relevant chunks
-    if not sources and result.get('found'):
-        for chunk in relevant_chunks[:3]:
-            doc_id = chunk.get('document_id')
-            if doc_id and doc_id not in seen_docs:
-                seen_docs.add(doc_id)
-                # Fetch document to get S3 key and generate presigned URL
-                doc = Document.find_by_id(doc_id)
-                view_url = None
-                if doc and doc.get('s3_key'):
-                    view_url = S3Service.get_presigned_url(doc['s3_key'], for_download=False)
-                sources.append({
-                    'documentId': doc_id,
-                    'documentName': chunk.get('document_name', 'Unknown'),
-                    'viewUrl': view_url
-                })
+    # Fallback: if no sources from QA but answer found, use the top relevant chunk
+    if not sources and result.get('found') and relevant_chunks:
+        chunk = relevant_chunks[0]
+        doc_id = chunk.get('document_id')
+        if doc_id:
+            doc = Document.find_by_id(doc_id)
+            view_url = None
+            if doc and doc.get('s3_key'):
+                view_url = S3Service.get_presigned_url(doc['s3_key'], for_download=False)
+            sources.append({
+                'documentId': doc_id,
+                'documentName': chunk.get('document_name', 'Unknown'),
+                'viewUrl': view_url
+            })
     
     answer = result.get('answer', 'Not found in document')
     found = result.get('found', False)
