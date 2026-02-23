@@ -18,11 +18,11 @@ export default function Footer() {
             <span className="text-base font-semibold text-white">{APP_NAME}</span>
           </div>
 
-          <div className="flex items-center gap-6 text-sm">
+          {/* <div className="flex items-center gap-6 text-sm">
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-white transition-colors">Contact</a>
-          </div>
+          </div> */}
 
           <p className="text-sm">
             © {currentYear} {APP_NAME}. All rights reserved.

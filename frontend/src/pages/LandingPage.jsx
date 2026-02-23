@@ -248,7 +248,7 @@ const features = [
     icon: CheckCircle,
     title: 'Zero Hallucination',
     description:
-      'Every answer is grounded in your actual documents. If the information isn\'t there, we tell you clearly — no fabricated responses.',
+      'Every answer is grounded in your actual documents. If the information isn\'t there, we tell you clearly - no fabricated responses.',
   },
   {
     icon: Bell,
@@ -260,7 +260,7 @@ const features = [
     icon: Database,
     title: 'Smart Organization',
     description:
-      'Categorize documents by type — insurance, academic, ID, medical — and find them instantly with search and filters.',
+      'Categorize documents by type - insurance, academic, ID, medical - and find them instantly with search and filters.',
   },
   {
     icon: Fingerprint,
