@@ -20,6 +20,22 @@ export function AuthProvider({ children }) {
   const location = useLocation();
 
   /**
+   * Listen for session-expired events from the axios interceptor.
+   * Clears auth state and redirects to login via React Router (no hard reload).
+   */
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      removeToken();
+      setUser(null);
+      setIsAuthenticated(false);
+      navigate(ROUTES.LOGIN, { replace: true });
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, [navigate]);
+
+  /**
    * Initialize auth state on mount.
    * Checks for existing token and validates it by fetching user profile.
    */
