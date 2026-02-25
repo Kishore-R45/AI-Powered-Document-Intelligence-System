@@ -135,7 +135,7 @@ export default function ForgotPasswordForm() {
         <div className="text-center mb-2">
           <h2 className="text-lg font-semibold text-neutral-900">Forgot Password</h2>
           <p className="text-sm text-neutral-500 mt-1">
-            Enter your email address and we'll send you a verification code.
+            Enter your email address and we&apos;ll send you a verification code.
           </p>
         </div>
 
