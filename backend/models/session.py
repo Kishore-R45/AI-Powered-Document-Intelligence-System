@@ -119,13 +119,13 @@ class Session:
             # No previous sessions - first login after registration, not a new device alert
             return False
         
-        # Check if any previous session matches this IP + user agent combo
+        # Check if any previous session matches this IP or user agent
         for session in previous_sessions:
             prev_ip = session.get('ip_address')
             prev_ua = session.get('user_agent')
             
-            # Match on IP address or user agent (fuzzy - same browser family)
-            if prev_ip == ip_address and prev_ua == user_agent:
+            # Match on IP address OR user agent (same device/browser can change networks)
+            if prev_ip == ip_address or prev_ua == user_agent:
                 return False
         
         return True
