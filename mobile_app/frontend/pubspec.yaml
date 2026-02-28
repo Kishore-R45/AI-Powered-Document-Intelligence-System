@@ -36,7 +36,9 @@ dependencies:
 
   # Camera & Files
   image_picker: ^1.0.0
+  file_picker: ^8.0.0
   path_provider: ^2.1.0
+  url_launcher: ^6.2.0
 
   # Local Storage (offline support)
   hive: ^2.2.0
