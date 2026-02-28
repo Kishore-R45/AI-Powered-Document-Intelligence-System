@@ -118,6 +118,27 @@ def init_scheduler(app):
     
     scheduler = BackgroundScheduler()
     
+    def keep_alive():
+        """
+        Ping the app's own /health endpoint to prevent HuggingFace Spaces
+        from putting the container to sleep due to inactivity.
+        """
+        import requests, os
+        space_url = os.getenv('SPACE_HOST')  # HuggingFace sets this automatically
+        port = int(os.getenv('PORT', 7860))
+        
+        # Try external URL first (keeps the Space awake from HF's perspective)
+        if space_url:
+            url = f"https://{space_url}/health"
+        else:
+            url = f"http://localhost:{port}/health"
+        
+        try:
+            resp = requests.get(url, timeout=15)
+            print(f"[KeepAlive] Ping {url} → {resp.status_code}")
+        except Exception as e:
+            print(f"[KeepAlive] Ping failed: {e}")
+    
     def run_with_context():
         """Run expiry reminder within Flask app context."""
         with app.app_context():
@@ -133,6 +154,15 @@ def init_scheduler(app):
                 ExpiryReminderJob.check_expired()
             except Exception as e:
                 print(f"Error running expired check job: {e}")
+    
+    # Keep-alive ping every 14 minutes to prevent HuggingFace Spaces sleep
+    scheduler.add_job(
+        func=keep_alive,
+        trigger=IntervalTrigger(minutes=14),
+        id='keep_alive_ping',
+        name='Keep alive ping to prevent sleep',
+        replace_existing=True
+    )
     
     # Run expiry reminder job every 6 hours (more frequent than daily for reliability)
     scheduler.add_job(
