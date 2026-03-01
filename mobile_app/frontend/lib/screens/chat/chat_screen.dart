@@ -173,11 +173,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             Container(
               width: 80,
               height: 80,
@@ -215,7 +216,8 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               textAlign: TextAlign.center,
             ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
-          ],
+            ],
+          ),
         ),
       ),
     );
