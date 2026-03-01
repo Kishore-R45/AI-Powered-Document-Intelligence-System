@@ -60,6 +60,8 @@ class AuthProvider extends ChangeNotifier {
         if (res.data?['user'] != null) {
           _user = UserModel.fromJson(
               res.data!['user'] as Map<String, dynamic>);
+          // Ensure userId is persisted for biometric login
+          await LocalStorageService.saveUserId(_user!.id);
         }
         _isAuthenticated = true;
         _hasCompletedFirstLogin = true;
@@ -73,6 +75,7 @@ class AuthProvider extends ChangeNotifier {
         final cachedUser = LocalStorageService.cachedUserJson;
         if (cachedUser != null) {
           _user = UserModel.fromJson(cachedUser);
+          await LocalStorageService.saveUserId(_user!.id);
           _isAuthenticated = true;
           _hasCompletedFirstLogin = true;
           if (_shouldAutoLock()) {
@@ -197,6 +200,7 @@ class AuthProvider extends ChangeNotifier {
     final cachedUser = LocalStorageService.cachedUserJson;
     if (cachedUser != null) {
       _user = UserModel.fromJson(cachedUser);
+      await LocalStorageService.saveUserId(_user!.id);
     }
     _isAuthenticated = true;
     _isLocked = false;
@@ -250,7 +254,18 @@ class AuthProvider extends ChangeNotifier {
     }
 
     // Step 2: Try online biometric-token verification
-    final storedUserId = _user?.id ?? LocalStorageService.userId;
+    // Get userId from: current user → dedicated storage → cached user JSON
+    String? storedUserId = _user?.id ?? LocalStorageService.userId;
+    if ((storedUserId == null || storedUserId.isEmpty)) {
+      final cachedJson = LocalStorageService.cachedUserJson;
+      if (cachedJson != null) {
+        storedUserId = cachedJson['id'] as String?;
+        // Persist for future use
+        if (storedUserId != null && storedUserId.isNotEmpty) {
+          await LocalStorageService.saveUserId(storedUserId);
+        }
+      }
+    }
     if (storedUserId != null && storedUserId.isNotEmpty) {
       final res = await ApiClient.post(
         Endpoints.biometricLogin,
