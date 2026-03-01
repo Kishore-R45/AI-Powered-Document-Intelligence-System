@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/chat_message_model.dart';
+import '../../providers/document_provider.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessageModel message;
@@ -131,41 +133,74 @@ class MessageBubble extends StatelessWidget {
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.brand900.withOpacity(0.3)
-              : AppTheme.brand50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isDark
-                ? const Color(0xFF2A3070)
-                : AppTheme.brand200,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.description_outlined,
-              size: 14,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                source.documentName,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      child: GestureDetector(
+        onTap: () {
+          try {
+            final docProvider =
+                Provider.of<DocumentProvider>(context, listen: false);
+            final doc = docProvider.documents.firstWhere(
+              (d) => d.id == source.documentId,
+              orElse: () => docProvider.documents.firstWhere(
+                (d) =>
+                    d.name.toLowerCase() ==
+                    source.documentName.toLowerCase(),
+                orElse: () => throw StateError('not found'),
               ),
+            );
+            Navigator.pushNamed(context, '/document-viewer', arguments: doc);
+          } catch (_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Document not found or has been deleted'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppTheme.brand900.withOpacity(0.3)
+                : AppTheme.brand50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDark
+                  ? const Color(0xFF2A3070)
+                  : AppTheme.brand200,
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.description_outlined,
+                size: 14,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  source.documentName,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Theme.of(context).colorScheme.primary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.open_in_new,
+                size: 12,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -22,6 +22,9 @@ class LocalStorageService {
   static const String _keyUserJson = 'user_json';
   static const String _keyPasswordHash = 'password_hash';
   static const String _keyLastEmail = 'last_email';
+  static const String _keyUserId = 'user_id';
+  static const String _keyPushNotifications = 'push_notifications';
+  static const String _keyExpiryReminders = 'expiry_reminders';
   static const String _docFilesBoxName = 'doc_files';
 
   static SharedPreferences? _prefs;
@@ -93,6 +96,20 @@ class LocalStorageService {
     await prefs.setBool(_keyAutoLockEnabled, enabled);
   }
 
+  static bool get pushNotificationsEnabled =>
+      prefs.getBool(_keyPushNotifications) ?? true;
+
+  static Future<void> setPushNotificationsEnabled(bool enabled) async {
+    await prefs.setBool(_keyPushNotifications, enabled);
+  }
+
+  static bool get expiryRemindersEnabled =>
+      prefs.getBool(_keyExpiryReminders) ?? true;
+
+  static Future<void> setExpiryRemindersEnabled(bool enabled) async {
+    await prefs.setBool(_keyExpiryReminders, enabled);
+  }
+
   static DateTime? get lastActiveTime {
     final ms = prefs.getInt(_keyLastActiveTime);
     return ms != null ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
@@ -128,6 +145,12 @@ class LocalStorageService {
       prefs.getString(_keyUserJson) != null;
 
   // ─── User Cache ───
+
+  static String? get userId => prefs.getString(_keyUserId);
+
+  static Future<void> saveUserId(String id) async {
+    await prefs.setString(_keyUserId, id);
+  }
 
   static Future<void> saveUserJson(Map<String, dynamic> json) async {
     await prefs.setString(_keyUserJson, jsonEncode(json));

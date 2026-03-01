@@ -156,7 +156,7 @@ class ProfileScreen extends StatelessWidget {
                   _MenuTile(
                     icon: Icons.notifications_outlined,
                     label: 'Notification Settings',
-                    onTap: () {},
+                    onTap: () => Navigator.pushNamed(context, '/settings'),
                   ),
                 ],
               ),

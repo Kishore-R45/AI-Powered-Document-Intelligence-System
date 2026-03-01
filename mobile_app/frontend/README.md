@@ -1,4 +1,4 @@
-# docvault_mobile
+# InfoVault_mobile
 
 A new Flutter project.
 

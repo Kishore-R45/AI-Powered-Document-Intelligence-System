@@ -572,19 +572,21 @@ ANSWER (extract directly from context):"""
         cls,
         question: str,
         relevant_chunks: List[dict],
-        min_confidence: float = 0.1
+        min_confidence: float = 0.1,
+        kv_context: str = "",
+        kv_source_map: dict = None,
     ) -> dict:
         """
         Process a user query using the full RAG pipeline.
         
         Pipeline:
-        1. Assemble context from relevant chunks
+        1. Assemble context from relevant chunks + extracted KV data
         2. Try structured extraction (regex) for deterministic queries
         3. If structured extraction fails, use LLM
         4. Verify LLM answer against context
         5. Return formatted response
         """
-        if not relevant_chunks:
+        if not relevant_chunks and not kv_context:
             return {
                 'answer': "Not found in document",
                 'found': False,
@@ -597,7 +599,7 @@ ANSWER (extract directly from context):"""
         sources = []
         seen_docs = set()
         total_chars = 0
-        max_context_chars = 4000
+        max_context_chars = 6000
         
         for chunk in relevant_chunks:
             text = chunk.get('text', '')
@@ -621,7 +623,22 @@ ANSWER (extract directly from context):"""
         
         context = "\n\n---\n\n".join(context_parts)
         
-        print(f"[QA] Context: {len(context)} chars from {len(context_parts)} chunks, {len(sources)} unique docs")
+        # Prepend extracted key-value data for higher priority access
+        if kv_context:
+            kv_header = "=== EXTRACTED KEY-VALUE DATA FROM DOCUMENTS ===\n" + kv_context + "\n=== END OF EXTRACTED DATA ===\n\n"
+            context = kv_header + context
+            # Also add KV sources to the sources list
+            if kv_source_map:
+                for doc_id, src_info in kv_source_map.items():
+                    if doc_id not in seen_docs:
+                        seen_docs.add(doc_id)
+                        sources.append({
+                            'documentId': doc_id,
+                            'documentName': src_info['documentName'],
+                            'chunkIndex': 0,
+                        })
+        
+        print(f"[QA] Context: {len(context)} chars from {len(context_parts)} chunks + KV data, {len(sources)} unique docs")
         print(f"[QA] Context preview:\n{context[:500]}...")
         
         # Step 2: Try structured extraction (deterministic, no LLM)

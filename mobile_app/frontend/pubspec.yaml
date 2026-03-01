@@ -1,5 +1,5 @@
-name: docvault_mobile
-description: DocVault - AI-Powered Document Intelligence System Mobile App
+name: InfoVault
+description: InfoVault - AI-Powered Document Intelligence System Mobile App
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -50,6 +50,9 @@ dependencies:
 
   # Open files with native viewer
   open_filex: ^4.3.0
+
+  # Share files
+  share_plus: ^7.0.0
 
   # Network
   http: ^1.1.0

@@ -6,12 +6,14 @@ class KeyValueCard extends StatelessWidget {
   final String keyLabel;
   final String value;
   final bool isLast;
+  final VoidCallback? onDelete;
 
   const KeyValueCard({
     super.key,
     required this.keyLabel,
     required this.value,
     this.isLast = false,
+    this.onDelete,
   });
 
   @override
@@ -89,6 +91,26 @@ class KeyValueCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onDelete != null) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF3A2030)
+                          : const Color(0xFFFFF0F0),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline,
+                      size: 16,
+                      color: const Color(0xFFFA5252).withOpacity(0.7),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -288,6 +288,41 @@ def re_extract_data(document_id):
     )
 
 
+@documents_bp.route('/<document_id>/extracted-data/delete-field', methods=['POST'])
+@require_auth
+@handle_errors
+def delete_extracted_field(document_id):
+    """Delete a single key-value pair from a document's extracted data."""
+    document = Document.find_by_id(document_id)
+    
+    if not document:
+        return error_response("Document not found", 404)
+    
+    if str(document['user_id']) != g.user_id:
+        return error_response("Access denied", 403)
+    
+    data = request.get_json() or {}
+    field_key = data.get('key', '').strip()
+    
+    if not field_key:
+        return error_response("Field key is required", 400)
+    
+    extracted_data = document.get('extracted_data', {})
+    
+    if field_key not in extracted_data:
+        return error_response(f"Field '{field_key}' not found", 404)
+    
+    del extracted_data[field_key]
+    Document.update_extracted_data(document_id, extracted_data)
+    
+    print(f"[Documents] Deleted field '{field_key}' from document {document_id}")
+    
+    return success_response(
+        data={'extractedData': extracted_data},
+        message=f"Field '{field_key}' deleted successfully."
+    )
+
+
 @documents_bp.route('/delete/<document_id>', methods=['DELETE'])
 @require_auth
 @handle_errors

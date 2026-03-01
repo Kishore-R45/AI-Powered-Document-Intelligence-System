@@ -63,6 +63,31 @@ def query():
             'sources': []
         })
     
+    # ── Gather extracted key-value pair data from user's documents ──
+    # This gives the QA pipeline access to structured fields (name, DOB, PAN, etc.)
+    all_user_docs = Document.find_by_user(g.user_id, limit=200)
+    kv_context_parts = []
+    kv_source_map = {}  # doc_id -> {documentName, documentType}
+    for doc in all_user_docs:
+        extracted_data = doc.get('extracted_data', {})
+        if extracted_data:
+            doc_id = str(doc['_id'])
+            doc_name = doc.get('name', 'Unknown')
+            doc_type = doc.get('type', 'general')
+            kv_source_map[doc_id] = {
+                'documentId': doc_id,
+                'documentName': doc_name,
+                'documentType': doc_type,
+            }
+            lines = [f"[Document: {doc_name}]"]
+            for key, value in extracted_data.items():
+                lines.append(f"  {key}: {value}")
+            kv_context_parts.append("\n".join(lines))
+    
+    kv_context = "\n\n".join(kv_context_parts) if kv_context_parts else ""
+    if kv_context:
+        print(f"[Chat] Assembled {len(kv_context)} chars of extracted KV data from {len(kv_context_parts)} documents")
+    
     # Search for relevant chunks using hybrid retrieval (semantic + keyword boost)
     print(f"Searching for relevant chunks for user {g.user_id}")
     relevant_chunks = EmbeddingService.search_similar(
@@ -73,7 +98,7 @@ def query():
     )
     print(f"Found {len(relevant_chunks)} relevant chunks")
     
-    if not relevant_chunks:
+    if not relevant_chunks and not kv_context:
         not_found_answer = "Not found in document"
         ChatHistory.add_message(
             user_id=g.user_id,
@@ -92,11 +117,13 @@ def query():
             'sources': []
         })
     
-    # Process query using extractive QA
+    # Process query using extractive QA, with KV context for better accuracy
     result = QAService.process_query(
         question=question,
-        relevant_chunks=relevant_chunks,
-        min_confidence=0.1
+        relevant_chunks=relevant_chunks or [],
+        min_confidence=0.1,
+        kv_context=kv_context,
+        kv_source_map=kv_source_map,
     )
     
     # Format sources (no presigned URLs for mobile - local files)

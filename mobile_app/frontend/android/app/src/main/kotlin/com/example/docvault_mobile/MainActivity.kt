@@ -1,4 +1,4 @@
-package com.example.docvault_mobile
+package com.example.InfoVault_mobile
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

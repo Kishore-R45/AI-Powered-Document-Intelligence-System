@@ -2,22 +2,90 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/extracted_data_model.dart';
+import '../../providers/extracted_data_provider.dart';
 import '../../widgets/common/custom_card.dart';
 import '../../widgets/extracted_data/key_value_card.dart';
 import '../../widgets/common/animated_list_item.dart';
 
-class DocumentDataDetailScreen extends StatelessWidget {
+class DocumentDataDetailScreen extends StatefulWidget {
   final ExtractedDataModel extractedData;
 
   const DocumentDataDetailScreen({super.key, required this.extractedData});
 
   @override
+  State<DocumentDataDetailScreen> createState() => _DocumentDataDetailScreenState();
+}
+
+class _DocumentDataDetailScreenState extends State<DocumentDataDetailScreen> {
+  late ExtractedDataModel _currentData;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentData = widget.extractedData;
+  }
+
+  Future<void> _deleteField(String key) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Field'),
+        content: Text('Are you sure you want to delete "$key"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFFA5252)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final provider = context.read<ExtractedDataProvider>();
+    final success = await provider.deleteField(_currentData.documentId, key);
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        final updatedData = Map<String, String>.from(_currentData.data);
+        updatedData.remove(key);
+        _currentData = _currentData.copyWith(data: updatedData);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"$key" deleted'),
+          backgroundColor: const Color(0xFF20C997),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to delete field'),
+          backgroundColor: const Color(0xFFFA5252),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final entries = extractedData.data.entries.toList();
+    final entries = _currentData.data.entries.toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -25,7 +93,7 @@ class DocumentDataDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              extractedData.documentName,
+              _currentData.documentName,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -163,6 +231,7 @@ class DocumentDataDetailScreen extends StatelessWidget {
                       child: KeyValueCard(
                         keyLabel: kv.key,
                         value: kv.value,
+                        onDelete: () => _deleteField(kv.key),
                       ),
                     ),
                   );
@@ -188,7 +257,7 @@ class DocumentDataDetailScreen extends StatelessWidget {
 
   void _copyAll(BuildContext context) {
     final buffer = StringBuffer();
-    for (final entry in extractedData.data.entries) {
+    for (final entry in _currentData.data.entries) {
       buffer.writeln('${entry.key}: ${entry.value}');
     }
     Clipboard.setData(ClipboardData(text: buffer.toString()));

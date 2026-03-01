@@ -117,6 +117,31 @@ class ExtractedDataProvider extends ChangeNotifier {
     return res.success;
   }
 
+  /// Delete a single key-value field from a document's extracted data.
+  Future<bool> deleteField(String documentId, String fieldKey) async {
+    final res = await ApiClient.post(
+      Endpoints.documentDeleteField(documentId),
+      body: {'key': fieldKey},
+    );
+
+    if (res.success) {
+      // Update local data
+      final idx = _extractedDataList.indexWhere((e) => e.documentId == documentId);
+      if (idx != -1) {
+        final current = _extractedDataList[idx];
+        final updatedData = Map<String, String>.from(current.data);
+        updatedData.remove(fieldKey);
+        _extractedDataList[idx] = current.copyWith(data: updatedData);
+
+        // Update offline cache
+        await LocalStorageService.cacheExtractedData(documentId, _extractedDataList[idx]);
+      }
+      notifyListeners();
+    }
+
+    return res.success;
+  }
+
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();

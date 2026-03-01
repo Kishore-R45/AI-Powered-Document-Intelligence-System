@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:gap/gap.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../config/theme.dart';
 import '../../models/document_model.dart';
 import '../../providers/document_provider.dart';
@@ -42,32 +43,20 @@ class DocumentViewerScreen extends StatelessWidget {
               ),
             ),
             actions: [
-              IconButton(
-                onPressed: () => _openDocument(context),
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.download_outlined, color: Colors.white, size: 20),
-                ),
-                tooltip: 'Download',
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.share, color: Colors.white, size: 20),
-                ),
-                tooltip: 'Share',
-              ),
-              IconButton(
-                onPressed: () {},
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  switch (value) {
+                    case 'download':
+                      _openDocument(context);
+                      break;
+                    case 'share':
+                      _shareDocument(context);
+                      break;
+                    case 'delete':
+                      _showDeleteDialog(context);
+                      break;
+                  }
+                },
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -76,6 +65,44 @@ class DocumentViewerScreen extends StatelessWidget {
                   ),
                   child: const Icon(Icons.more_vert, color: Colors.white, size: 20),
                 ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'download',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download_outlined, size: 20),
+                        SizedBox(width: 12),
+                        Text('Download / Open'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'share',
+                    child: Row(
+                      children: [
+                        Icon(Icons.share_outlined, size: 20),
+                        SizedBox(width: 12),
+                        Text('Share'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 20,
+                            color: Colors.red.shade400),
+                        const SizedBox(width: 12),
+                        Text('Delete',
+                            style: TextStyle(color: Colors.red.shade400)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 4),
             ],
@@ -200,8 +227,8 @@ class DocumentViewerScreen extends StatelessWidget {
                   // ─── Extracted Data Button ───
                   Consumer<ExtractedDataProvider>(
                     builder: (ctx, edProvider, _) {
-                      final hasData = edProvider.extractedDataList
-                          .any((e) => e.documentId == document.id);
+                      final extractedData = edProvider.getByDocumentId(document.id);
+                      final hasData = extractedData != null && extractedData.data.isNotEmpty;
                       if (!hasData) return const SizedBox.shrink();
 
                       return CustomButton(
@@ -212,7 +239,7 @@ class DocumentViewerScreen extends StatelessWidget {
                           Navigator.pushNamed(
                             context,
                             '/document-data',
-                            arguments: document,
+                            arguments: extractedData,
                           );
                         },
                       ).animate().fadeIn(delay: 300.ms, duration: 400.ms);
@@ -346,6 +373,26 @@ class DocumentViewerScreen extends StatelessWidget {
         ),
       );
     }
+  }
+
+  void _shareDocument(BuildContext context) async {
+    final localPath = LocalStorageService.getDocFilePath(document.id);
+    if (localPath != null && localPath.isNotEmpty) {
+      final file = File(localPath);
+      if (await file.exists()) {
+        await Share.shareXFiles(
+          [XFile(localPath)],
+          text: document.name,
+        );
+        return;
+      }
+    }
+
+    // No local file — share document info as text
+    await Share.share(
+      '${document.name}\nCategory: ${document.category}\nType: ${document.type.toUpperCase()}\nUploaded: ${_formatDate(document.uploadDate)}',
+      subject: document.name,
+    );
   }
 
   void _showDeleteDialog(BuildContext context) {

@@ -224,9 +224,10 @@ class DataExtractionService:
     def extract_with_llm(cls, text: str, document_type: str = 'general') -> Dict[str, str]:
         """
         Extract key-value pairs using LLM for comprehensive extraction.
+        Sends the COMPLETE extracted text to the LLM for accurate results.
         
         Args:
-            text: Document text
+            text: Document text (full text, not truncated)
             document_type: Type of document
             
         Returns:
@@ -241,20 +242,30 @@ class DataExtractionService:
         target_fields = cls.DOCUMENT_FIELD_MAP.get(document_type.lower())
         fields_hint = ""
         if target_fields:
-            fields_hint = f"\nExpected fields for {document_type} document: {', '.join(target_fields)}"
+            fields_hint = f"\nExpected fields for this {document_type} document: {', '.join(target_fields)}"
         
-        # Truncate text to fit context window
-        max_text = text[:3000] if len(text) > 3000 else text
+        # Send complete text for accurate extraction (up to 6000 chars for context window)
+        max_text = text[:6000] if len(text) > 6000 else text
         
         system_prompt = (
-            "You are a document data extraction expert. Extract ALL key-value pairs from the document text.\n"
-            "RULES:\n"
-            "1. Extract ONLY information that is explicitly in the text\n"
-            "2. Format each pair as: Key: Value (one per line)\n"
-            "3. Use standard field names (Name, Date of Birth, PAN Number, etc.)\n"
-            "4. Extract numbers, dates, IDs EXACTLY as they appear\n"
-            "5. Do NOT infer or guess any information\n"
-            "6. Skip fields that are not present in the text\n"
+            "You are a precise document data extraction expert. Your job is to extract ONLY valid, "
+            "meaningful key-value pairs from the document text below.\n\n"
+            "STRICT RULES:\n"
+            "1. Extract ONLY factual information that is EXPLICITLY stated in the document\n"
+            "2. Each key-value pair MUST be a real, meaningful piece of data (e.g., Name, Date, ID number, Amount)\n"
+            "3. DO NOT extract:\n"
+            "   - Headers, titles, or section names as values\n"
+            "   - Partial or incomplete data\n"
+            "   - Generic labels without specific values\n"
+            "   - Duplicate information\n"
+            "   - Column headers from tables without corresponding values\n"
+            "   - Decorative or formatting text\n"
+            "4. Format EXACTLY as: Key: Value (one per line)\n"
+            "5. Use clean, standard field names (e.g., 'Full Name' not 'NAME OF THE CANDIDATE')\n"
+            "6. Numbers, dates, and IDs must be extracted EXACTLY as they appear\n"
+            "7. If a field appears multiple times, keep only the most complete/relevant value\n"
+            "8. DO NOT add any explanation, notes, or commentary — ONLY key-value pairs\n"
+            "9. If you cannot find valid data, return NOTHING rather than guessing\n"
             f"{fields_hint}"
         )
         
@@ -308,7 +319,10 @@ class DataExtractionService:
     
     @staticmethod
     def _parse_llm_output(output: str) -> Dict[str, str]:
-        """Parse LLM output into key-value pairs."""
+        """
+        Parse LLM output into key-value pairs with strict validation.
+        Filters out noise, duplicates, and invalid entries.
+        """
         extracted = {}
         
         for line in output.split('\n'):
@@ -319,7 +333,11 @@ class DataExtractionService:
             # Remove bullet points and numbering
             line = re.sub(r'^[\-\*\•\d]+[.\)]\s*', '', line)
             
-            # Look for "Key: Value" or "Key - Value" patterns
+            # Skip lines that are clearly not key-value pairs
+            if line.startswith(('Note', 'Here', 'The ', 'I ', 'Based', 'From', 'Document', '---', '===', '***')):
+                continue
+            
+            # Look for "Key: Value" pattern
             match = re.match(r'^([^:]+?):\s*(.+)$', line)
             if not match:
                 match = re.match(r'^([^-]+?)\s*-\s*(.+)$', line)
@@ -328,17 +346,47 @@ class DataExtractionService:
                 key = match.group(1).strip()
                 value = match.group(2).strip()
                 
+                # Remove quotes around values
+                value = value.strip('"\'')
+                
+                # ── Strict validation ──
+                
                 # Skip if key or value is too long (likely not a real field)
                 if len(key) > 50 or len(value) > 200:
                     continue
                 
+                # Skip if key is too short (1-2 chars is noise)
+                if len(key) < 3:
+                    continue
+                
                 # Skip obvious non-fields
                 skip_keys = ['note', 'notes', 'comment', 'disclaimer', 'output', 'result',
-                             'answer', 'response', 'document', 'text', 'source']
+                             'answer', 'response', 'document', 'text', 'source', 'page',
+                             'section', 'table', 'column', 'row', 'header', 'footer',
+                             'title', 'subtitle', 'description', 'summary', 'details',
+                             'extracted', 'data', 'field', 'value', 'key', 'info',
+                             'information', 'type', 'format', 'status']
                 if key.lower() in skip_keys:
                     continue
                 
-                if key and value and value.lower() not in ['n/a', 'not found', 'not available', 'none', '-']:
+                # Skip if value is placeholder or empty
+                invalid_values = ['n/a', 'not found', 'not available', 'none', '-', '--',
+                                  'na', 'nil', 'null', 'unknown', 'not specified',
+                                  'not mentioned', 'not provided', 'not applicable']
+                if value.lower() in invalid_values:
+                    continue
+                
+                # Skip if value is just a number less than 2 (likely table index)
+                if value.isdigit() and int(value) < 2:
+                    continue
+                
+                # Skip duplicate keys (keep first occurrence)
+                normalized_key = key.lower().replace(' ', '').replace('_', '')
+                existing_keys = {k.lower().replace(' ', '').replace('_', '') for k in extracted.keys()}
+                if normalized_key in existing_keys:
+                    continue
+                
+                if key and value:
                     extracted[key] = value
         
         return extracted
@@ -353,13 +401,14 @@ class DataExtractionService:
         1. Run regex extraction (fast, deterministic)
         2. Run LLM extraction (comprehensive, may find additional fields)
         3. Merge results (regex takes priority for overlapping keys)
+        4. Validate and clean all results
         
         Args:
-            text: Document text
+            text: Document text (FULL text, not truncated)
             document_type: Type of document (id, academic, financial, insurance, medical, general)
             
         Returns:
-            Dictionary of extracted key-value pairs
+            Dictionary of validated, cleaned key-value pairs
         """
         if not text or len(text.strip()) < 10:
             return {}
@@ -370,7 +419,7 @@ class DataExtractionService:
         regex_data = cls.extract_with_regex(text, document_type)
         print(f"[DataExtraction] Regex extracted {len(regex_data)} fields: {list(regex_data.keys())}")
         
-        # Step 2: LLM extraction (for additional fields)
+        # Step 2: LLM extraction (send FULL text for better results)
         llm_data = {}
         try:
             llm_data = cls.extract_with_llm(text, document_type)
@@ -389,8 +438,28 @@ class DataExtractionService:
         for key, value in regex_data.items():
             merged[key] = value
         
-        # Clean up: remove empty or very short values
-        cleaned = {k: v for k, v in merged.items() if v and len(str(v).strip()) > 0}
+        # Step 4: Validate and clean all results
+        cleaned = {}
+        for k, v in merged.items():
+            v_str = str(v).strip()
+            
+            # Skip empty or very short values
+            if not v_str or len(v_str) < 1:
+                continue
+            
+            # Skip values that are just numbers less than 2 (table indices)
+            if v_str.isdigit() and int(v_str) < 2:
+                continue
+                
+            # Skip values that are single characters
+            if len(v_str) == 1 and not v_str.isdigit():
+                continue
+            
+            # Skip values identical to the key
+            if v_str.lower() == k.lower():
+                continue
+            
+            cleaned[k] = v_str
         
         print(f"[DataExtraction] Final extraction: {len(cleaned)} fields")
         return cleaned

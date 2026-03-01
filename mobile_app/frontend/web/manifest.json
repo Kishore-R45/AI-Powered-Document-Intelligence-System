@@ -1,6 +1,6 @@
 {
-    "name": "docvault_mobile",
-    "short_name": "docvault_mobile",
+    "name": "InfoVault",
+    "short_name": "InfoVault",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

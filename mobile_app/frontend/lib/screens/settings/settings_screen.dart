@@ -8,8 +8,25 @@ import '../../providers/auth_provider.dart';
 import '../../services/local_storage_service.dart';
 import '../../widgets/common/custom_card.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  late bool _autoLockEnabled;
+  late bool _pushNotifications;
+  late bool _expiryReminders;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoLockEnabled = LocalStorageService.autoLockEnabled;
+    _pushNotifications = LocalStorageService.pushNotificationsEnabled;
+    _expiryReminders = LocalStorageService.expiryRemindersEnabled;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,10 +106,10 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Auto-Lock',
                   subtitle: 'Lock after 5 minutes of inactivity',
                   trailing: Switch.adaptive(
-                    value: LocalStorageService.autoLockEnabled,
+                    value: _autoLockEnabled,
                     onChanged: (val) {
                       LocalStorageService.setAutoLockEnabled(val);
-                      (context as Element).markNeedsBuild();
+                      setState(() => _autoLockEnabled = val);
                     },
                     activeColor: AppTheme.brand600,
                   ),
@@ -183,8 +200,11 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Push Notifications',
                   subtitle: 'Receive alerts and updates',
                   trailing: Switch.adaptive(
-                    value: true,
-                    onChanged: (_) {},
+                    value: _pushNotifications,
+                    onChanged: (val) {
+                      LocalStorageService.setPushNotificationsEnabled(val);
+                      setState(() => _pushNotifications = val);
+                    },
                     activeColor: AppTheme.brand600,
                   ),
                 ),
@@ -195,8 +215,11 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Expiry Reminders',
                   subtitle: 'Get notified before documents expire',
                   trailing: Switch.adaptive(
-                    value: true,
-                    onChanged: (_) {},
+                    value: _expiryReminders,
+                    onChanged: (val) {
+                      LocalStorageService.setExpiryRemindersEnabled(val);
+                      setState(() => _expiryReminders = val);
+                    },
                     activeColor: AppTheme.brand600,
                   ),
                 ),

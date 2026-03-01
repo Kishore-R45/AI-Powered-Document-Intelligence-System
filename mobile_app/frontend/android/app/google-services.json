@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "918841787172",
+    "project_id": "infovault-6173a",
+    "storage_bucket": "infovault-6173a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:918841787172:android:c5ebcc9b4eb50c560f29b1",
+        "android_client_info": {
+          "package_name": "com.example.InfoVault_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7DIBpFZltuWLd3YBm-F7pFR5-lttE6Ck"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -220,6 +220,7 @@ class AuthProvider extends ChangeNotifier {
       _isBiometricEnabled = _user!.biometricEnabled;
       await LocalStorageService.setBiometricEnabled(_isBiometricEnabled);
       await LocalStorageService.saveUserJson(data['user'] as Map<String, dynamic>);
+      await LocalStorageService.saveUserId(_user!.id);
     }
 
     _isAuthenticated = true;
@@ -249,12 +250,12 @@ class AuthProvider extends ChangeNotifier {
     }
 
     // Step 2: Try online biometric-token verification
-    final bioToken = LocalStorageService.biometricToken;
-    if (bioToken != null && bioToken.isNotEmpty) {
+    final storedUserId = _user?.id ?? LocalStorageService.userId;
+    if (storedUserId != null && storedUserId.isNotEmpty) {
       final res = await ApiClient.post(
         Endpoints.biometricLogin,
         body: {
-          'biometricToken': bioToken,
+          'userId': storedUserId,
           'deviceId': _deviceId,
         },
         auth: false,
