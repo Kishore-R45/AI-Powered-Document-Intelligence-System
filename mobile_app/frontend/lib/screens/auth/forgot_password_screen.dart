@@ -28,6 +28,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   int _step = 0; // 0 = email, 1 = otp, 2 = new password, 3 = success
 
   @override
+  void initState() {
+    super.initState();
+    // Clear any error from other auth screens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().clearError();
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _newPasswordController.dispose();

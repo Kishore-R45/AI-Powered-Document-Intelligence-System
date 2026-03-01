@@ -1,8 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../config/theme.dart';
-import '../../widgets/common/custom_button.dart';
 
 class ScanDocumentScreen extends StatefulWidget {
   const ScanDocumentScreen({super.key});
@@ -13,6 +14,79 @@ class ScanDocumentScreen extends StatefulWidget {
 
 class _ScanDocumentScreenState extends State<ScanDocumentScreen> {
   bool _flashOn = false;
+  bool _isCapturing = false;
+
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _captureFromCamera() async {
+    if (_isCapturing) return;
+    setState(() => _isCapturing = true);
+
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 95,
+        maxWidth: 2400,
+        maxHeight: 3200,
+      );
+
+      if (photo != null && mounted) {
+        _navigateToUpload(File(photo.path), photo.name);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Camera error: $e'),
+            backgroundColor: const Color(0xFFFA5252),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 95,
+        maxWidth: 2400,
+        maxHeight: 3200,
+      );
+
+      if (image != null && mounted) {
+        _navigateToUpload(File(image.path), image.name);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gallery error: $e'),
+            backgroundColor: const Color(0xFFFA5252),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _navigateToUpload(File file, String fileName) {
+    Navigator.pop(context);
+    Navigator.pushNamed(
+      context,
+      '/upload',
+      arguments: {'file': file, 'fileName': fileName},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +114,7 @@ class _ScanDocumentScreenState extends State<ScanDocumentScreen> {
                   ),
                   const Gap(12),
                   Text(
-                    'Camera preview will appear here',
+                    'Tap the capture button to scan',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.4),
                       fontSize: 14,
@@ -173,14 +247,12 @@ class _ScanDocumentScreenState extends State<ScanDocumentScreen> {
                       _ControlButton(
                         icon: Icons.photo_library_outlined,
                         label: 'Gallery',
-                        onTap: () {},
+                        onTap: _pickFromGallery,
                       ),
 
                       // Capture Button
                       GestureDetector(
-                        onTap: () {
-                          _showCaptureAnimation(context);
-                        },
+                        onTap: _isCapturing ? null : _captureFromCamera,
                         child: Container(
                           width: 72,
                           height: 72,
@@ -193,10 +265,22 @@ class _ScanDocumentScreenState extends State<ScanDocumentScreen> {
                           ),
                           padding: const EdgeInsets.all(4),
                           child: Container(
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white,
+                              color: _isCapturing ? Colors.grey : Colors.white,
                             ),
+                            child: _isCapturing
+                                ? const Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
                       ),
@@ -205,7 +289,7 @@ class _ScanDocumentScreenState extends State<ScanDocumentScreen> {
                       _ControlButton(
                         icon: Icons.auto_fix_high,
                         label: 'Auto',
-                        onTap: () {},
+                        onTap: _captureFromCamera,
                       ),
                     ],
                   ),
@@ -259,22 +343,6 @@ class _ScanDocumentScreenState extends State<ScanDocumentScreen> {
     ];
   }
 
-  void _showCaptureAnimation(BuildContext context) {
-    // Simulate a flash/capture effect then pop
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.white.withOpacity(0.5),
-      builder: (_) => const SizedBox.shrink(),
-    );
-
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        Navigator.pop(context); // dialog
-        Navigator.pop(context); // screen
-      }
-    });
-  }
 }
 
 class _ControlButton extends StatelessWidget {

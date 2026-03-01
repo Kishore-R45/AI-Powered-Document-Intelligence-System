@@ -7,6 +7,7 @@ class NotificationProvider extends ChangeNotifier {
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
   String _filter = 'All'; // 'All', 'Unread', 'Expiry'
+  String? _fcmToken;
 
   // Getters
   List<NotificationModel> get notifications => _filteredNotifications;
@@ -77,5 +78,28 @@ class NotificationProvider extends ChangeNotifier {
       _notifications.removeWhere((n) => n.id == id);
       notifyListeners();
     }
+  }
+
+  // ─── FCM Token Management ───
+
+  /// Register an FCM token with the backend for push notifications.
+  Future<bool> registerFcmToken(String token) async {
+    _fcmToken = token;
+    final res = await ApiClient.post(
+      Endpoints.registerFcm,
+      body: {'fcmToken': token},
+    );
+    return res.success;
+  }
+
+  /// Unregister the FCM token (e.g. on logout).
+  Future<bool> unregisterFcmToken() async {
+    if (_fcmToken == null) return true;
+    final res = await ApiClient.post(
+      Endpoints.unregisterFcm,
+      body: {'fcmToken': _fcmToken},
+    );
+    if (res.success) _fcmToken = null;
+    return res.success;
   }
 }

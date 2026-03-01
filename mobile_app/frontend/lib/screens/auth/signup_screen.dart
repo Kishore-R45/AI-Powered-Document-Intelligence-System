@@ -32,6 +32,10 @@ class _SignupScreenState extends State<SignupScreen> {
   void initState() {
     super.initState();
     _passwordController.addListener(_calculatePasswordStrength);
+    // Clear any error from other auth screens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().clearError();
+    });
   }
 
   @override
@@ -118,7 +122,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
 
     if (success && mounted) {
-      Navigator.pushNamed(context, '/verify-otp');
+      Navigator.pushNamed(context, '/otp-verification');
     }
   }
 

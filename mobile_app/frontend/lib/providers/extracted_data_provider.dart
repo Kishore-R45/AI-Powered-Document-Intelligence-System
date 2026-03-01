@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/document_model.dart';
 import '../models/extracted_data_model.dart';
 import '../api/api_client.dart';
 import '../api/endpoints.dart';
+import '../services/local_storage_service.dart';
 
 class ExtractedDataProvider extends ChangeNotifier {
   List<ExtractedDataModel> _extractedDataList = [];
@@ -42,7 +44,8 @@ class ExtractedDataProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetches all documents and builds extracted-data entries from their metadata.
+  /// Fetch all documents and build extracted data from their extractedData field.
+  /// The mobile backend stores AI-extracted key-value data in each document.
   Future<void> fetchExtractedData() async {
     _isLoading = true;
     notifyListeners();
@@ -52,113 +55,66 @@ class ExtractedDataProvider extends ChangeNotifier {
     if (res.success && res.data?['documents'] != null) {
       final docs = res.data!['documents'] as List;
       _extractedDataList = docs.map((d) {
-        final doc = d as Map<String, dynamic>;
-        final id = (doc['_id'] ?? doc['id'] ?? '').toString();
-        final name = doc['name'] ?? doc['originalName'] ?? 'Untitled';
-        final docType = doc['docType'] ?? doc['type'] ?? 'other';
-        final extractedText = doc['extractedText'] ?? '';
-
-        // Build key-value data map from document metadata
-        final Map<String, String> data = {};
-        if (extractedText.toString().isNotEmpty) {
-          // Provide a truncated preview of the extracted text
-          final text = extractedText.toString();
-          data['Extracted Text'] =
-              text.length > 500 ? '${text.substring(0, 500)}...' : text;
-        }
-        if (doc['pageCount'] != null) {
-          data['Pages'] = doc['pageCount'].toString();
-        }
-        if (doc['fileSize'] != null) {
-          final bytes = int.tryParse(doc['fileSize'].toString()) ?? 0;
-          data['File Size'] = bytes > 1048576
-              ? '${(bytes / 1048576).toStringAsFixed(1)} MB'
-              : '${(bytes / 1024).toStringAsFixed(1)} KB';
-        }
-        if (doc['expiryDate'] != null) {
-          data['Expiry Date'] = doc['expiryDate'].toString().split('T').first;
-        }
-        data['Document Type'] = docType.toString();
-
-        // Map type to category
-        String category;
-        switch (docType.toString().toLowerCase()) {
-          case 'aadhaar':
-          case 'pan':
-          case 'passport':
-          case 'driving_license':
-            category = 'Identity';
-            break;
-          case 'marksheet':
-          case 'degree':
-          case 'certificate':
-            category = 'Education';
-            break;
-          case 'insurance':
-          case 'medical':
-            category = 'Medical';
-            break;
-          default:
-            category = 'Other';
-        }
-
-        return ExtractedDataModel(
-          id: 'ext_$id',
-          documentId: id,
-          documentName: name.toString(),
-          documentType: docType.toString(),
-          category: category,
-          data: data,
-          extractedAt:
-              DateTime.tryParse(doc['createdAt']?.toString() ?? '') ??
-                  DateTime.now(),
-        );
+        final doc = DocumentModel.fromJson(d as Map<String, dynamic>);
+        return ExtractedDataModel.fromDocument(doc);
       }).toList();
+
+      // Cache offline
+      await LocalStorageService.cacheAllExtractedData(_extractedDataList);
+    } else {
+      // Fallback to offline cache
+      if (_extractedDataList.isEmpty) {
+        _extractedDataList = LocalStorageService.getAllCachedExtractedData();
+      }
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Fetch extracted text for a single document
+  /// Fetch extracted data for a single document using dedicated endpoint.
   Future<ExtractedDataModel?> fetchForDocument(String documentId) async {
-    final res = await ApiClient.get(Endpoints.documentGet(documentId));
-    if (res.success && res.data?['document'] != null) {
-      final doc = res.data!['document'] as Map<String, dynamic>;
-      final name = doc['name'] ?? doc['originalName'] ?? 'Untitled';
-      final docType = doc['docType'] ?? doc['type'] ?? 'other';
-      final extractedText = doc['extractedText'] ?? '';
+    final res =
+        await ApiClient.get(Endpoints.documentExtractedData(documentId));
 
-      final Map<String, String> data = {};
-      if (extractedText.toString().isNotEmpty) {
-        data['Extracted Text'] = extractedText.toString();
-      }
-      if (doc['pageCount'] != null) data['Pages'] = doc['pageCount'].toString();
-      data['Document Type'] = docType.toString();
+    if (res.success && res.data != null) {
+      final model = ExtractedDataModel.fromJson(res.data!);
 
-      final model = ExtractedDataModel(
-        id: 'ext_$documentId',
-        documentId: documentId,
-        documentName: name.toString(),
-        documentType: docType.toString(),
-        category: 'Other',
-        data: data,
-        extractedAt:
-            DateTime.tryParse(doc['createdAt']?.toString() ?? '') ??
-                DateTime.now(),
-      );
-
-      // Update local cache
-      final idx = _extractedDataList.indexWhere((e) => e.documentId == documentId);
+      // Update local list
+      final idx =
+          _extractedDataList.indexWhere((e) => e.documentId == documentId);
       if (idx != -1) {
         _extractedDataList[idx] = model;
       } else {
         _extractedDataList.add(model);
       }
+
+      // Cache offline
+      await LocalStorageService.cacheExtractedData(documentId, model);
       notifyListeners();
       return model;
     }
-    return null;
+
+    // Try offline cache
+    return LocalStorageService.getCachedExtractedData(documentId);
+  }
+
+  /// Re-extract AI key-value data for a document.
+  Future<bool> reExtractData(String documentId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final res =
+        await ApiClient.post(Endpoints.documentReExtract(documentId));
+
+    if (res.success && res.data != null) {
+      // Refresh the data
+      await fetchForDocument(documentId);
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return res.success;
   }
 
   void setSearchQuery(String query) {

@@ -20,12 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    DocumentsScreen(),
-    ChatScreen(),
-    NotificationsScreen(),
-  ];
+  late final List<Widget> _screens;
 
   void _onTabChanged(int index) {
     setState(() => _currentIndex = index);
@@ -34,6 +29,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _screens = [
+      DashboardScreen(onSwitchTab: _onTabChanged),
+      const DocumentsScreen(),
+      const ChatScreen(),
+      const NotificationsScreen(),
+    ];
     // Load data on home screen init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DocumentProvider>().fetchDocuments();

@@ -11,7 +11,8 @@ import '../../widgets/common/custom_card.dart';
 import '../../widgets/common/animated_list_item.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final void Function(int)? onSwitchTab;
+  const DashboardScreen({super.key, this.onSwitchTab});
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +344,7 @@ class DashboardScreen extends StatelessWidget {
         'AI Chat',
         Icons.smart_toy_outlined,
         const Color(0xFF20C997),
-        () {}, // handled by bottom nav
+        () => onSwitchTab?.call(2), // Chat is index 2 in bottom nav
       ),
       _QuickAction(
         'Data',
@@ -429,7 +430,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () => onSwitchTab?.call(1),
                 child: const Text('View All'),
               ),
             ],

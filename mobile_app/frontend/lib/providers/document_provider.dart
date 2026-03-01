@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import '../models/document_model.dart';
 import '../api/api_client.dart';
 import '../api/endpoints.dart';
+import '../services/local_storage_service.dart';
 
 class DocumentProvider extends ChangeNotifier {
   List<DocumentModel> _documents = [];
@@ -73,6 +76,14 @@ class DocumentProvider extends ChangeNotifier {
       _documents = list
           .map((d) => DocumentModel.fromJson(d as Map<String, dynamic>))
           .toList();
+      // Cache for offline use
+      await LocalStorageService.cacheDocuments(_documents);
+    } else {
+      // Fallback to offline cache
+      final cached = LocalStorageService.getCachedDocuments();
+      if (cached.isNotEmpty && _documents.isEmpty) {
+        _documents = cached;
+      }
     }
     _isLoading = false;
     notifyListeners();
@@ -97,6 +108,15 @@ class DocumentProvider extends ChangeNotifier {
     final res = await ApiClient.delete(Endpoints.documentDelete(id));
     if (res.success) {
       _documents.removeWhere((d) => d.id == id);
+      // Clean up local file
+      try {
+        final localPath = LocalStorageService.getDocFilePath(id);
+        if (localPath != null) {
+          final f = File(localPath);
+          if (await f.exists()) await f.delete();
+          await LocalStorageService.removeDocFilePath(id);
+        }
+      } catch (_) {}
       notifyListeners();
       return true;
     }
@@ -137,6 +157,23 @@ class DocumentProvider extends ChangeNotifier {
     if (res.success && res.data?['document'] != null) {
       final doc = DocumentModel.fromJson(
           res.data!['document'] as Map<String, dynamic>);
+
+      // Save file locally for offline access
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        final docsDir = Directory('${appDir.path}/infovault_docs');
+        if (!await docsDir.exists()) {
+          await docsDir.create(recursive: true);
+        }
+        final ext = p.extension(file.path);
+        final localFile = File('${docsDir.path}/${doc.id}$ext');
+        await file.copy(localFile.path);
+        await LocalStorageService.saveDocFilePath(doc.id, localFile.path);
+      } catch (e) {
+        // Non-fatal: file just won't be available offline
+        debugPrint('[DocumentProvider] Failed to save file locally: $e');
+      }
+
       _documents.insert(0, doc);
     } else {
       _error = res.message ?? 'Upload failed';
@@ -147,11 +184,12 @@ class DocumentProvider extends ChangeNotifier {
     return res.success;
   }
 
-  /// Get a pre-signed view URL for a document.
-  Future<String?> getViewUrl(String documentId) async {
+  /// Get document details from backend.
+  Future<DocumentModel?> getDocumentDetails(String documentId) async {
     final res = await ApiClient.get(Endpoints.documentGet(documentId));
-    if (res.success) {
-      return res.data?['viewUrl'] as String?;
+    if (res.success && res.data?['document'] != null) {
+      return DocumentModel.fromJson(
+          res.data!['document'] as Map<String, dynamic>);
     }
     return null;
   }

@@ -27,6 +27,30 @@ class _UploadScreenState extends State<UploadScreen> {
   DateTime? _expiryDate;
 
   @override
+  void initState() {
+    super.initState();
+    // Check if a file was passed from the scan screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        final file = args['file'] as File?;
+        final fileName = args['fileName'] as String?;
+        if (file != null) {
+          setState(() {
+            _selectedFile = file;
+            _selectedFileName = fileName ?? 'scanned_document.jpg';
+            if (_nameController.text.isEmpty) {
+              _nameController.text = (_selectedFileName ?? 'Scanned Document')
+                  .replaceAll(RegExp(r'\.[^.]+$'), '')
+                  .replaceAll('_', ' ');
+            }
+          });
+        }
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
@@ -379,20 +403,21 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   /// Map UI category string to backend docType
+  /// Backend accepts: insurance, academic, id, financial, medical, general
   String _categoryToDocType(String? category) {
     switch (category?.toLowerCase()) {
       case 'identity':
-        return 'aadhaar';
+        return 'id';
       case 'education':
-        return 'marksheet';
+        return 'academic';
       case 'finance':
-        return 'insurance';
+        return 'financial';
       case 'medical':
         return 'medical';
       case 'legal':
-        return 'certificate';
+        return 'insurance';
       default:
-        return 'other';
+        return 'general';
     }
   }
 

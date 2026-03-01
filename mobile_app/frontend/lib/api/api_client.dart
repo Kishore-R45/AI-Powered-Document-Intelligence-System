@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_config.dart';
 
@@ -148,6 +149,7 @@ class ApiClient {
   }
 
   /// Multipart file upload (POST).
+  /// Automatically detects and sets the correct MIME type from file extension.
   static Future<ApiResponse> uploadFile(
     String path, {
     required File file,
@@ -163,10 +165,14 @@ class ApiClient {
         request.headers['Authorization'] = 'Bearer $_token';
       }
 
-      // Attach file
+      // Detect correct MIME type from file extension
+      final contentType = _detectMediaType(file.path);
+
+      // Attach file with explicit content type
       request.files.add(await http.MultipartFile.fromPath(
         fileFieldName,
         file.path,
+        contentType: contentType,
       ));
 
       // Attach form fields
@@ -181,6 +187,35 @@ class ApiClient {
       return _handleResponse(response);
     } catch (e) {
       return ApiResponse.error(_friendlyError(e));
+    }
+  }
+
+  /// Detect the correct MediaType from a file path's extension.
+  /// This prevents Flutter from sending 'application/octet-stream'
+  /// for known file types like PDF, JPEG, PNG.
+  static MediaType _detectMediaType(String filePath) {
+    final ext = filePath.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return MediaType('application', 'pdf');
+      case 'jpg':
+      case 'jpeg':
+        return MediaType('image', 'jpeg');
+      case 'png':
+        return MediaType('image', 'png');
+      case 'webp':
+        return MediaType('image', 'webp');
+      case 'tiff':
+      case 'tif':
+        return MediaType('image', 'tiff');
+      case 'bmp':
+        return MediaType('image', 'bmp');
+      case 'doc':
+        return MediaType('application', 'msword');
+      case 'docx':
+        return MediaType('application', 'vnd.openxmlformats-officedocument.wordprocessingml.document');
+      default:
+        return MediaType('application', 'octet-stream');
     }
   }
 

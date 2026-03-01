@@ -23,6 +23,15 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _passwordError;
 
   @override
+  void initState() {
+    super.initState();
+    // Clear any error from other auth screens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().clearError();
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();

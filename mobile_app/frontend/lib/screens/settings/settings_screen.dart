@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import '../../config/theme.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/local_storage_service.dart';
 import '../../widgets/common/custom_card.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -69,11 +70,17 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: authProvider.isBiometricEnabled
                       ? 'Fingerprint / Face ID enabled'
                       : 'Disabled',
-                  trailing: Switch.adaptive(
-                    value: authProvider.isBiometricEnabled,
-                    onChanged: (_) => authProvider.toggleBiometric(),
-                    activeColor: AppTheme.brand600,
-                  ),
+                  trailing: authProvider.isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Switch.adaptive(
+                          value: authProvider.isBiometricEnabled,
+                          onChanged: (_) => authProvider.toggleBiometric(),
+                          activeColor: AppTheme.brand600,
+                        ),
                 ),
                 _divider(theme),
                 _SettingsTile(
@@ -82,8 +89,11 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Auto-Lock',
                   subtitle: 'Lock after 5 minutes of inactivity',
                   trailing: Switch.adaptive(
-                    value: true,
-                    onChanged: (_) {},
+                    value: LocalStorageService.autoLockEnabled,
+                    onChanged: (val) {
+                      LocalStorageService.setAutoLockEnabled(val);
+                      (context as Element).markNeedsBuild();
+                    },
                     activeColor: AppTheme.brand600,
                   ),
                 ),

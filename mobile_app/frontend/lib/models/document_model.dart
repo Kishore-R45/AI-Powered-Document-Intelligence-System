@@ -12,6 +12,8 @@ class DocumentModel {
   final List<String> tags;
   final bool isOfflineAvailable;
   final String status; // 'active', 'expiring', 'expired'
+  final Map<String, dynamic> extractedData;
+  final String processingStatus; // 'pending', 'processing', 'completed', 'failed'
 
   const DocumentModel({
     required this.id,
@@ -27,6 +29,8 @@ class DocumentModel {
     this.tags = const [],
     this.isOfflineAvailable = true,
     this.status = 'active',
+    this.extractedData = const {},
+    this.processingStatus = 'completed',
   });
 
   factory DocumentModel.fromJson(Map<String, dynamic> json) {
@@ -65,6 +69,10 @@ class DocumentModel {
           ? List<String>.from(json['tags'])
           : <String>[],
       status: status,
+      extractedData: json['extractedData'] != null
+          ? Map<String, dynamic>.from(json['extractedData'])
+          : {},
+      processingStatus: json['processingStatus'] ?? 'completed',
     );
   }
 
@@ -79,6 +87,8 @@ class DocumentModel {
         'fileSize': fileSize,
         'tags': tags,
         'status': status,
+        'extractedData': extractedData,
+        'processingStatus': processingStatus,
       };
 
   static String _typeToCategory(String type) {
@@ -139,6 +149,8 @@ class DocumentModel {
     List<String>? tags,
     bool? isOfflineAvailable,
     String? status,
+    Map<String, dynamic>? extractedData,
+    String? processingStatus,
   }) {
     return DocumentModel(
       id: id ?? this.id,
@@ -154,6 +166,8 @@ class DocumentModel {
       tags: tags ?? this.tags,
       isOfflineAvailable: isOfflineAvailable ?? this.isOfflineAvailable,
       status: status ?? this.status,
+      extractedData: extractedData ?? this.extractedData,
+      processingStatus: processingStatus ?? this.processingStatus,
     );
   }
 }

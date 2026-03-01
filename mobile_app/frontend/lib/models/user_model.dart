@@ -6,6 +6,7 @@ class UserModel {
   final DateTime createdAt;
   final int totalDocuments;
   final int totalQueries;
+  final bool biometricEnabled;
 
   const UserModel({
     required this.id,
@@ -15,6 +16,7 @@ class UserModel {
     required this.createdAt,
     this.totalDocuments = 0,
     this.totalQueries = 0,
+    this.biometricEnabled = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class UserModel {
           : DateTime.now(),
       totalDocuments: json['totalDocuments'] ?? 0,
       totalQueries: json['totalQueries'] ?? 0,
+      biometricEnabled: json['biometricEnabled'] ?? false,
     );
   }
 
@@ -39,6 +42,7 @@ class UserModel {
         'createdAt': createdAt.toIso8601String(),
         'totalDocuments': totalDocuments,
         'totalQueries': totalQueries,
+        'biometricEnabled': biometricEnabled,
       };
 
   String get initials {
@@ -57,6 +61,7 @@ class UserModel {
     DateTime? createdAt,
     int? totalDocuments,
     int? totalQueries,
+    bool? biometricEnabled,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -66,6 +71,7 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       totalDocuments: totalDocuments ?? this.totalDocuments,
       totalQueries: totalQueries ?? this.totalQueries,
+      biometricEnabled: biometricEnabled ?? this.biometricEnabled,
     );
   }
 }

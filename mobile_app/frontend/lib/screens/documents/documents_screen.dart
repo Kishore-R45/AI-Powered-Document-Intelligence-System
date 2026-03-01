@@ -22,6 +22,15 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Always refresh documents when entering screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DocumentProvider>().fetchDocuments();
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();

@@ -1,12 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:gap/gap.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../config/theme.dart';
 import '../../models/document_model.dart';
 import '../../providers/document_provider.dart';
 import '../../providers/extracted_data_provider.dart';
+import '../../services/local_storage_service.dart';
 import '../../widgets/common/custom_card.dart';
 import '../../widgets/common/custom_button.dart';
 
@@ -319,29 +321,24 @@ class DocumentViewerScreen extends StatelessWidget {
   }
 
   void _openDocument(BuildContext context) async {
-    final docProvider = context.read<DocumentProvider>();
-    final url = await docProvider.getViewUrl(document.id);
-    if (url != null && url.isNotEmpty) {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Could not open document'),
-            backgroundColor: const Color(0xFFFA5252),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+    // Try to open the locally-stored file using the device's default viewer
+    final localPath = LocalStorageService.getDocFilePath(document.id);
+    if (localPath != null && localPath.isNotEmpty) {
+      final file = File(localPath);
+      if (await file.exists()) {
+        final result = await OpenFilex.open(localPath);
+        if (result.type == ResultType.done) return;
+        // If open failed, fall through to show message
       }
-    } else if (context.mounted) {
+    }
+
+    // No local file available — show a helpful message
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Could not get document URL'),
-          backgroundColor: const Color(0xFFFA5252),
+          content: const Text(
+              'Document file not available locally. Please re-upload to store it on this device.'),
+          backgroundColor: const Color(0xFFF59F00),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),

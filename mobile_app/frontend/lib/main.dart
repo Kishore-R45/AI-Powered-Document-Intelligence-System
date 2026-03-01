@@ -8,9 +8,13 @@ import 'providers/document_provider.dart';
 import 'providers/extracted_data_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/chat_provider.dart';
+import 'services/local_storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize local storage (Hive + SharedPreferences)
+  await LocalStorageService.initialize();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

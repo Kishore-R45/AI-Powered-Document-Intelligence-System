@@ -1,5 +1,5 @@
 /// All backend API endpoint paths.
-/// These map to the Flask routes in the backend.
+/// These map to the Flask routes in the mobile backend.
 class Endpoints {
   Endpoints._();
 
@@ -13,14 +13,20 @@ class Endpoints {
   static const String verifyResetOtp = '/auth/verify-reset-otp';
   static const String resetPassword = '/auth/reset-password';
 
+  // Mobile-specific auth
+  static const String biometricLogin = '/auth/biometric-login';
+  static const String registerDevice = '/auth/register-device';
+  static const String validateSession = '/auth/validate-session';
+
   // ─── Documents ───
   static const String documentUpload = '/documents/upload';
   static const String documentList = '/documents/list';
   static String documentGet(String id) => '/documents/$id';
-  static String documentView(String id) => '/documents/$id/view';
   static String documentDelete(String id) => '/documents/delete/$id';
   static String documentUpdate(String id) => '/documents/$id';
-  static String documentReindex(String id) => '/documents/$id/reindex';
+  static String documentExtractedData(String id) => '/documents/$id/extracted-data';
+  static String documentReExtract(String id) => '/documents/$id/re-extract';
+  static const String documentReindex = '/documents/reindex';
 
   // ─── Chat ───
   static const String chatQuery = '/chat/query';
@@ -38,9 +44,20 @@ class Endpoints {
   static const String notificationsReadAll = '/notifications/read-all';
   static String notificationDelete(String id) => '/notifications/$id';
   static const String notificationsUnreadCount = '/notifications/unread-count';
+  static const String registerFcm = '/notifications/register-fcm';
+  static const String unregisterFcm = '/notifications/unregister-fcm';
+  static const String testPush = '/notifications/test-push';
 
   // ─── User ───
   static const String userProfile = '/user/profile';
   static const String userChangePassword = '/user/change-password';
   static const String userLogoutAll = '/user/logout-all';
+
+  // Mobile-specific user
+  static const String biometricToggle = '/user/biometric/toggle';
+  static const String biometricStatus = '/user/biometric/status';
+  static const String userSessions = '/user/sessions';
+  static String revokeSession(String id) => '/user/sessions/$id';
+  static const String trustedDevices = '/user/trusted-devices';
+  static String revokeTrustedDevice(String id) => '/user/trusted-devices/$id';
 }

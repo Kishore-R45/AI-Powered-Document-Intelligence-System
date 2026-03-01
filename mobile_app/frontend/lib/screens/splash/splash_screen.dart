@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
+import '../../providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,14 +15,35 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _navigateAfterDelay();
+    _navigateAfterInit();
   }
 
-  Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(seconds: 3));
-    if (mounted) {
-      // For UI-only, navigate to login
-      // In real app: check auth state, biometric, etc.
+  Future<void> _navigateAfterInit() async {
+    // Wait minimum splash time + for auth to initialize
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final auth = context.read<AuthProvider>();
+
+    // Wait for auth provider to finish initialization
+    while (!auth.initialized) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+    }
+
+    if (!mounted) return;
+
+    if (auth.isAuthenticated) {
+      if (auth.isLocked) {
+        Navigator.pushReplacementNamed(context, '/lock');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } else if (auth.hasCompletedFirstLogin && auth.isBiometricEnabled) {
+      // Has biometric token but session expired → show lock screen
+      Navigator.pushReplacementNamed(context, '/lock');
+    } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
   }
