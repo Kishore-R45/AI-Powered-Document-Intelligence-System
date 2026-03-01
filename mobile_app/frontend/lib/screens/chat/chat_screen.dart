@@ -23,7 +23,9 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().loadChatHistory();
+      context.read<ChatProvider>().loadChatHistory().then((_) {
+        _scrollToBottom();
+      });
     });
   }
 

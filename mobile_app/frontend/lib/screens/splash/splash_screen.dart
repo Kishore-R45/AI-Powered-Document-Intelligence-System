@@ -36,13 +36,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (auth.isAuthenticated) {
       if (auth.isLocked) {
-        Navigator.pushReplacementNamed(context, '/lock');
+        Navigator.pushReplacementNamed(context, '/login');
       } else {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } else if (auth.hasCompletedFirstLogin && auth.isBiometricEnabled) {
-      // Has biometric token but session expired → show lock screen
-      Navigator.pushReplacementNamed(context, '/lock');
+      // Has biometric token but session expired → show login screen
+      Navigator.pushReplacementNamed(context, '/login');
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }

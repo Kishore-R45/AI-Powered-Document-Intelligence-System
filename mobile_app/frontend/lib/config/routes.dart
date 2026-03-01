@@ -15,6 +15,9 @@ import '../screens/extracted_data/extracted_data_screen.dart';
 import '../screens/extracted_data/document_data_detail_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/help/help_support_screen.dart';
+import '../screens/about/about_screen.dart';
+import '../screens/privacy/privacy_policy_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -31,6 +34,9 @@ class AppRoutes {
   static const String documentData = '/document-data';
   static const String profile = '/profile';
   static const String settings = '/settings';
+  static const String helpSupport = '/help-support';
+  static const String about = '/about';
+  static const String privacyPolicy = '/privacy-policy';
 
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -86,6 +92,15 @@ class AppRoutes {
 
       case settings:
         return _buildRoute(const SettingsScreen(), routeSettings);
+
+      case helpSupport:
+        return _buildRoute(const HelpSupportScreen(), routeSettings);
+
+      case about:
+        return _buildRoute(const AboutScreen(), routeSettings);
+
+      case privacyPolicy:
+        return _buildRoute(const PrivacyPolicyScreen(), routeSettings);
 
       default:
         return MaterialPageRoute(

@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/local_storage_service.dart';
+import '../../providers/notification_provider.dart';
 import '../../widgets/common/custom_card.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -204,6 +205,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (val) {
                       LocalStorageService.setPushNotificationsEnabled(val);
                       setState(() => _pushNotifications = val);
+                      context.read<NotificationProvider>().refreshSettings();
+                      if (val) {
+                        // Re-fetch when enabled
+                        context.read<NotificationProvider>().fetchNotifications();
+                      }
                     },
                     activeColor: AppTheme.brand600,
                   ),
@@ -219,6 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (val) {
                       LocalStorageService.setExpiryRemindersEnabled(val);
                       setState(() => _expiryReminders = val);
+                      context.read<NotificationProvider>().refreshSettings();
                     },
                     activeColor: AppTheme.brand600,
                   ),

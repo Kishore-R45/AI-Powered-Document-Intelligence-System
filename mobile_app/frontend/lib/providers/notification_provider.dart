@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
 import '../api/api_client.dart';
 import '../api/endpoints.dart';
+import '../services/local_storage_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   List<NotificationModel> _notifications = [];
@@ -14,23 +15,49 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get filter => _filter;
 
-  int get unreadCount =>
-      _notifications.where((n) => !n.isRead).length;
+  /// Whether push notifications are enabled in settings.
+  bool get pushEnabled => LocalStorageService.pushNotificationsEnabled;
+
+  /// Whether expiry reminders are enabled in settings.
+  bool get expiryEnabled => LocalStorageService.expiryRemindersEnabled;
+
+  int get unreadCount {
+    if (!pushEnabled) return 0;
+    return _applySettingsFilter(_notifications).where((n) => !n.isRead).length;
+  }
+
+  /// Apply settings-level filter (respects push & expiry toggles).
+  List<NotificationModel> _applySettingsFilter(List<NotificationModel> list) {
+    if (!pushEnabled) return [];
+    if (!expiryEnabled) {
+      return list.where((n) => n.type != NotificationType.expiry).toList();
+    }
+    return list;
+  }
 
   List<NotificationModel> get _filteredNotifications {
+    final settingsFiltered = _applySettingsFilter(_notifications);
     switch (_filter) {
       case 'Unread':
-        return _notifications.where((n) => !n.isRead).toList();
+        return settingsFiltered.where((n) => !n.isRead).toList();
       case 'Expiry':
-        return _notifications
+        return settingsFiltered
             .where((n) => n.type == NotificationType.expiry)
             .toList();
       default:
-        return _notifications;
+        return settingsFiltered;
     }
   }
 
   Future<void> fetchNotifications() async {
+    // If push notifications are disabled, clear local list
+    if (!pushEnabled) {
+      _notifications = [];
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
     notifyListeners();
 
@@ -43,6 +70,11 @@ class NotificationProvider extends ChangeNotifier {
           .toList();
     }
     _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Call when notification settings change to refresh the view.
+  void refreshSettings() {
     notifyListeners();
   }
 

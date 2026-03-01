@@ -1,13 +1,29 @@
-/// API configuration for connecting to the InfoVault Mobile backend.
-/// Change [baseUrl] to your deployed HuggingFace Spaces URL.
+/// ─── API Configuration ───────────────────────────────────────────────────
+///
+/// HOW TO CONFIGURE THE BACKEND URL:
+///
+/// 1. LOCAL DEVELOPMENT (default):
+///    - Android Emulator:  'http://10.0.2.2:5001'
+///    - Physical Device:   'http://<your-pc-ip>:5001'  (e.g. 'http://192.168.1.16:5001')
+///    - Web / Desktop:     'http://localhost:5001'
+///
+/// 2. HUGGINGFACE SPACES DEPLOYMENT:
+///    After uploading the backend to HuggingFace Spaces, replace [baseUrl]
+///    with your Space URL:
+///    - Format:  'https://<your-username>-<space-name>.hf.space'
+///    - Example: 'https://kishore-infovault-mobile.hf.space'
+///
+///    Just change the [baseUrl] below — everything else stays the same.
+///
+/// ──────────────────────────────────────────────────────────────────────────
 class ApiConfig {
   ApiConfig._();
 
-  /// Base URL of the mobile backend API.
-  /// For HuggingFace Spaces: https://<your-mobile-space>.hf.space
-  /// For local development: http://10.0.2.2:7860 (Android emulator)
-  ///                         http://localhost:7860 (Web/Desktop)
-  ///                         http://<your-pc-ip>:7860 (physical device)
+  /// ╔══════════════════════════════════════════════════════════════════╗
+  /// ║  CHANGE THIS URL to your deployed backend                      ║
+  /// ║  Local:      'http://192.168.1.16:5001'                        ║
+  /// ║  HuggingFace: 'https://<your-space>.hf.space'                  ║
+  /// ╚══════════════════════════════════════════════════════════════════╝
   static const String baseUrl = 'http://192.168.1.16:5001';
 
   /// API prefix — all endpoints sit under /api

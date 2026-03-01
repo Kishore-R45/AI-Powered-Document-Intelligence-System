@@ -39,7 +39,7 @@ class _DocIntelAppState extends State<DocIntelApp>
       auth.checkAutoLock().then((_) {
         if (auth.isLocked) {
           _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/lock',
+            '/login',
             (route) => false,
           );
         }
