@@ -243,9 +243,9 @@ class HelpSupportScreen extends StatelessWidget {
         'body': 'Hi InfoVault Team,\n\nI need help with:\n\n',
       },
     );
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri);
-    } else {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

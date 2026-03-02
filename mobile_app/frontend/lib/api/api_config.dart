@@ -24,7 +24,7 @@ class ApiConfig {
   /// ║  Local:      'http://192.168.1.16:5001'                        ║
   /// ║  HuggingFace: 'https://<your-space>.hf.space'                  ║
   /// ╚══════════════════════════════════════════════════════════════════╝
-  static const String baseUrl = 'http://192.168.1.16:5001';
+  static const String baseUrl = 'https://kishore200630-infovault-mobile.hf.space';
 
   /// API prefix — all endpoints sit under /api
   static const String apiPrefix = '/api';

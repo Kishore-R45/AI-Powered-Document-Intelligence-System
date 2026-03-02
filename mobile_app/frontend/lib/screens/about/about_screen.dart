@@ -308,9 +308,9 @@ class AboutScreen extends StatelessWidget {
 
   Future<void> _launchPortfolio(BuildContext context) async {
     final uri = Uri.parse(_portfolioUrl);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
