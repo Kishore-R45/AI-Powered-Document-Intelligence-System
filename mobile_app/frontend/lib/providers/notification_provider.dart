@@ -3,12 +3,14 @@ import '../models/notification_model.dart';
 import '../api/api_client.dart';
 import '../api/endpoints.dart';
 import '../services/local_storage_service.dart';
+import '../services/push_notification_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
   String _filter = 'All'; // 'All', 'Unread', 'Expiry'
   String? _fcmToken;
+  bool _fcmRegistered = false;
 
   // Getters
   List<NotificationModel> get notifications => _filteredNotifications;
@@ -57,6 +59,9 @@ class NotificationProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    // Auto-register FCM token with backend on first fetch
+    await _ensureFcmRegistered();
 
     _isLoading = true;
     notifyListeners();
@@ -114,6 +119,22 @@ class NotificationProvider extends ChangeNotifier {
 
   // ─── FCM Token Management ───
 
+  /// Auto-register FCM token with the backend if not yet done this session.
+  Future<void> _ensureFcmRegistered() async {
+    if (_fcmRegistered) return;
+    final token = PushNotificationService.fcmToken;
+    if (token != null && token.isNotEmpty) {
+      final success = await registerFcmToken(token);
+      if (success) {
+        _fcmRegistered = true;
+        // Listen for future token refreshes
+        PushNotificationService.onTokenRefresh = (newToken) {
+          registerFcmToken(newToken);
+        };
+      }
+    }
+  }
+
   /// Register an FCM token with the backend for push notifications.
   Future<bool> registerFcmToken(String token) async {
     _fcmToken = token;
@@ -131,7 +152,10 @@ class NotificationProvider extends ChangeNotifier {
       Endpoints.unregisterFcm,
       body: {'fcmToken': _fcmToken},
     );
-    if (res.success) _fcmToken = null;
+    if (res.success) {
+      _fcmToken = null;
+      _fcmRegistered = false;
+    }
     return res.success;
   }
 }

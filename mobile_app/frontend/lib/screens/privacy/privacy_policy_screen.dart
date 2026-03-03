@@ -45,7 +45,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 ),
                 const Gap(6),
                 Text(
-                  'Last updated: January 2025',
+                  'Last updated: March 2026',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.4),
                   ),
@@ -157,7 +157,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
           Center(
             child: Text(
-              '© 2025 InfoVault. All rights reserved.',
+              '© 2026 InfoVault. All rights reserved.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.3),
               ),

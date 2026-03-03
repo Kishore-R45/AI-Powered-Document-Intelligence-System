@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'config/routes.dart';
+import 'api/api_config.dart';
 import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 
@@ -15,6 +16,10 @@ class DocIntelApp extends StatefulWidget {
 class _DocIntelAppState extends State<DocIntelApp>
     with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  /// Tracks when the app truly entered the `paused` (background) state.
+  /// Null when the app is in the foreground.
+  DateTime? _pausedAt;
 
   @override
   void initState() {
@@ -31,20 +36,36 @@ class _DocIntelAppState extends State<DocIntelApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final auth = context.read<AuthProvider>();
+
     if (state == AppLifecycleState.paused) {
-      // App going to background → save last-active time
+      // App truly going to background (not just notification shade)
+      _pausedAt = DateTime.now();
       auth.updateActivity();
     } else if (state == AppLifecycleState.resumed) {
-      // App returning from background → check if auto-lock needed
-      auth.checkAutoLock().then((_) {
-        if (auth.isLocked) {
-          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/login',
-            (route) => false,
-          );
+      // Only check auto-lock if we were truly paused (backgrounded),
+      // AND we stayed in the background long enough.
+      // Pulling down the notification shade triggers inactive → resumed
+      // (NOT paused), so _pausedAt stays null → no lock.
+      if (_pausedAt != null) {
+        final pauseDuration = DateTime.now().difference(_pausedAt!);
+        _pausedAt = null; // reset
+
+        if (pauseDuration.inMinutes >= ApiConfig.autoLockMinutes) {
+          auth.checkAutoLock().then((_) {
+            if (auth.isLocked) {
+              _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                '/login',
+                (route) => false,
+              );
+            }
+          });
         }
-      });
+      }
+      // Always refresh last-active on resume so future checks are fresh
+      auth.updateActivity();
     }
+    // AppLifecycleState.inactive (notification shade, phone call, etc.)
+    // → intentionally ignored — no lock, no timestamp update.
   }
 
   @override

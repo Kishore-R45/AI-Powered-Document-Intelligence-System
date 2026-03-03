@@ -58,6 +58,13 @@ dependencies:
   http: ^1.1.0
   http_parser: ^4.0.0
 
+  # Firebase (push notifications)
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.6
+
+  # Local notifications (foreground push display)
+  flutter_local_notifications: ^18.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -69,9 +76,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/logo.png"
+  image_path: "assets/logo_icon.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/logo.png"
+  adaptive_icon_foreground: "assets/logo_icon.png"
 
 flutter:
   uses-material-design: true

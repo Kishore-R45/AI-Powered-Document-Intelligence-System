@@ -403,17 +403,21 @@ class AuthProvider extends ChangeNotifier {
       _isBiometricEnabled = newState;
       await LocalStorageService.setBiometricEnabled(newState);
 
-      // If enabling, save biometric token & register device
-      if (newState && res.data?['biometricToken'] != null) {
-        await LocalStorageService.saveBiometricToken(
-            res.data!['biometricToken'] as String);
-        // Register this as a trusted device
+      // If enabling, register this device as trusted for biometric login
+      if (newState) {
+        // Save biometric token if the server returns one
+        if (res.data?['biometricToken'] != null) {
+          await LocalStorageService.saveBiometricToken(
+              res.data!['biometricToken'] as String);
+        }
+        // Always register the device as trusted — this is required
+        // for the /biometric-login endpoint to accept the device.
         await ApiClient.post(Endpoints.registerDevice, body: {
           'deviceId': _deviceId,
           'deviceName': 'Mobile Device',
           'platform': 'android',
         });
-      } else if (!newState) {
+      } else {
         // Disabling - clear biometric token
         await LocalStorageService.saveBiometricToken('');
       }
