@@ -81,7 +81,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             title: '3. Data Storage & Security',
             content:
                 'Your data security is our top priority:\n\n'
-                '• Documents are stored securely in encrypted cloud storage (AWS S3).\n\n'
+                '• Documents are stored securely in your mobile.\n\n'
                 '• Passwords are hashed using industry-standard algorithms and are never stored in plain text.\n\n'
                 '• Authentication is handled through JWT tokens with automatic expiration.\n\n'
                 '• Biometric data (fingerprint/face ID) is processed locally on your device and never sent to our servers.\n\n'
