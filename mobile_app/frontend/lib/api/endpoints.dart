@@ -27,6 +27,8 @@ class Endpoints {
   static String documentExtractedData(String id) => '/documents/$id/extracted-data';
   static String documentReExtract(String id) => '/documents/$id/re-extract';
   static String documentDeleteField(String id) => '/documents/$id/extracted-data/delete-field';
+  static String documentUpdateField(String id) => '/documents/$id/extracted-data/update-field';
+  static String documentDeleteFields(String id) => '/documents/$id/extracted-data/delete-fields';
   static const String documentReindex = '/documents/reindex';
 
   // ─── Chat ───
