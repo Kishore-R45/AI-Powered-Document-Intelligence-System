@@ -323,6 +323,76 @@ def delete_extracted_field(document_id):
     )
 
 
+@documents_bp.route('/<document_id>/extracted-data/update-field', methods=['POST'])
+@require_auth
+@handle_errors
+def update_extracted_field(document_id):
+    """Update a single key-value pair in a document's extracted data."""
+    document = Document.find_by_id(document_id)
+    
+    if not document:
+        return error_response("Document not found", 404)
+    
+    if str(document['user_id']) != g.user_id:
+        return error_response("Access denied", 403)
+    
+    data = request.get_json() or {}
+    field_key = data.get('key', '').strip()
+    field_value = data.get('value', '').strip()
+    
+    if not field_key:
+        return error_response("Field key is required", 400)
+    if not field_value:
+        return error_response("Field value is required", 400)
+    
+    extracted_data = document.get('extracted_data', {})
+    extracted_data[field_key] = field_value
+    Document.update_extracted_data(document_id, extracted_data)
+    
+    return success_response(
+        data={'extractedData': extracted_data},
+        message=f"Field '{field_key}' updated successfully."
+    )
+
+
+@documents_bp.route('/<document_id>/extracted-data/delete-fields', methods=['POST'])
+@require_auth
+@handle_errors
+def delete_extracted_fields(document_id):
+    """Delete multiple key-value pairs from a document's extracted data."""
+    document = Document.find_by_id(document_id)
+    
+    if not document:
+        return error_response("Document not found", 404)
+    
+    if str(document['user_id']) != g.user_id:
+        return error_response("Access denied", 403)
+    
+    data = request.get_json() or {}
+    field_keys = data.get('keys', [])
+    
+    if not field_keys or not isinstance(field_keys, list):
+        return error_response("A list of field keys is required", 400)
+    
+    extracted_data = document.get('extracted_data', {})
+    deleted = []
+    for key in field_keys:
+        key = key.strip() if isinstance(key, str) else ''
+        if key and key in extracted_data:
+            del extracted_data[key]
+            deleted.append(key)
+    
+    if not deleted:
+        return error_response("None of the specified fields were found", 404)
+    
+    Document.update_extracted_data(document_id, extracted_data)
+    
+    return success_response(
+        data={'extractedData': extracted_data, 'deleted': deleted},
+        message=f"{len(deleted)} field(s) deleted successfully."
+    )
+
+
 @documents_bp.route('/delete/<document_id>', methods=['DELETE'])
 @require_auth
 @handle_errors
