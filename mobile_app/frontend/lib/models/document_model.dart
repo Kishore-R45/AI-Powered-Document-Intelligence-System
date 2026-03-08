@@ -38,7 +38,7 @@ class DocumentModel {
     String status = 'active';
     DateTime? expiry;
     if (json['expiryDate'] != null) {
-      expiry = DateTime.tryParse(json['expiryDate']);
+      expiry = DateTime.tryParse(json['expiryDate'])?.toLocal();
       if (expiry != null) {
         if (expiry.isBefore(DateTime.now())) {
           status = 'expired';
@@ -58,9 +58,9 @@ class DocumentModel {
       type: docType,
       category: category,
       uploadDate: json['uploadDate'] != null
-          ? DateTime.tryParse(json['uploadDate']) ?? DateTime.now()
+          ? (DateTime.tryParse(json['uploadDate'])?.toLocal() ?? DateTime.now())
           : (json['createdAt'] != null
-              ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
+              ? (DateTime.tryParse(json['createdAt'])?.toLocal() ?? DateTime.now())
               : DateTime.now()),
       expiryDate: expiry,
       fileUrl: json['viewUrl'],

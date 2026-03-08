@@ -29,7 +29,7 @@ class NotificationModel {
       type: _parseType(json['type']),
       isRead: json['read'] ?? json['isRead'] ?? false,
       createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
+          ? (DateTime.tryParse(json['createdAt'])?.toLocal() ?? DateTime.now())
           : DateTime.now(),
       documentId: json['documentId'],
       actionRoute: json['actionRoute'],

@@ -46,7 +46,7 @@ class ExtractedDataModel {
       category: json['category'] ?? doc['category'] ?? 'Other',
       data: parsed,
       extractedAt: json['extractedAt'] != null
-          ? DateTime.tryParse(json['extractedAt']) ?? DateTime.now()
+          ? (DateTime.tryParse(json['extractedAt'])?.toLocal() ?? DateTime.now())
           : DateTime.now(),
       isSynced: json['isSynced'] ?? true,
       processingStatus: json['processing_status'] ?? json['processingStatus'] ?? 'completed',
