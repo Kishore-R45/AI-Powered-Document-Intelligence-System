@@ -57,6 +57,119 @@ class _DocumentDataDetailScreenState extends State<DocumentDataDetailScreen> {
     });
   }
 
+  // ─── Add a new key-value pair ───
+  Future<void> _addField() async {
+    final keyController = TextEditingController();
+    final valueController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          title: const Text('Add New Field'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: keyController,
+                  decoration: InputDecoration(
+                    labelText: 'Field Name',
+                    hintText: 'e.g. Policy Number',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF1E2035) : AppTheme.neutral50,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Field name is required';
+                    if (_currentData.data.containsKey(v.trim())) return 'Field already exists';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: valueController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Value',
+                    hintText: 'Enter value',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF1E2035) : AppTheme.neutral50,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Value is required';
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.pop(ctx, {
+                    'key': keyController.text.trim(),
+                    'value': valueController.text.trim(),
+                  });
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null || !mounted) return;
+
+    final provider = context.read<ExtractedDataProvider>();
+    final success = await provider.updateField(
+      _currentData.documentId,
+      result['key']!,
+      result['value']!,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        final updatedData = Map<String, String>.from(_currentData.data);
+        updatedData[result['key']!] = result['value']!;
+        _currentData = _currentData.copyWith(data: updatedData);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${result['key']}" added'),
+          backgroundColor: const Color(0xFF20C997),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to add field'),
+          backgroundColor: const Color(0xFFFA5252),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
+  }
+
   // ─── Edit a single field ───
   Future<void> _editField(String key, String currentValue) async {
     final controller = TextEditingController(text: currentValue);
@@ -249,6 +362,13 @@ class _DocumentDataDetailScreenState extends State<DocumentDataDetailScreen> {
     final entries = _currentData.data.entries.toList();
 
     return Scaffold(
+      floatingActionButton: _isEditMode
+          ? null
+          : FloatingActionButton(
+              onPressed: _addField,
+              backgroundColor: AppTheme.brand600,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
       appBar: AppBar(
         leading: _isEditMode
             ? IconButton(
