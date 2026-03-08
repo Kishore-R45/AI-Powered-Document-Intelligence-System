@@ -142,6 +142,52 @@ class ExtractedDataProvider extends ChangeNotifier {
     return res.success;
   }
 
+  /// Update a single key-value field in a document's extracted data.
+  Future<bool> updateField(String documentId, String fieldKey, String fieldValue) async {
+    final res = await ApiClient.post(
+      Endpoints.documentUpdateField(documentId),
+      body: {'key': fieldKey, 'value': fieldValue},
+    );
+
+    if (res.success) {
+      final idx = _extractedDataList.indexWhere((e) => e.documentId == documentId);
+      if (idx != -1) {
+        final current = _extractedDataList[idx];
+        final updatedData = Map<String, String>.from(current.data);
+        updatedData[fieldKey] = fieldValue;
+        _extractedDataList[idx] = current.copyWith(data: updatedData);
+        await LocalStorageService.cacheExtractedData(documentId, _extractedDataList[idx]);
+      }
+      notifyListeners();
+    }
+
+    return res.success;
+  }
+
+  /// Delete multiple key-value fields from a document's extracted data.
+  Future<bool> deleteFields(String documentId, List<String> fieldKeys) async {
+    final res = await ApiClient.post(
+      Endpoints.documentDeleteFields(documentId),
+      body: {'keys': fieldKeys},
+    );
+
+    if (res.success) {
+      final idx = _extractedDataList.indexWhere((e) => e.documentId == documentId);
+      if (idx != -1) {
+        final current = _extractedDataList[idx];
+        final updatedData = Map<String, String>.from(current.data);
+        for (final key in fieldKeys) {
+          updatedData.remove(key);
+        }
+        _extractedDataList[idx] = current.copyWith(data: updatedData);
+        await LocalStorageService.cacheExtractedData(documentId, _extractedDataList[idx]);
+      }
+      notifyListeners();
+    }
+
+    return res.success;
+  }
+
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
