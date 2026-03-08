@@ -23,9 +23,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().loadChatHistory().then((_) {
-        _scrollToBottom();
-      });
+      context.read<ChatProvider>().loadChatHistory();
     });
   }
 
@@ -36,15 +34,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _handleSend(String message) {
@@ -122,10 +118,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? _buildWelcomeView(context)
                 : ListView.builder(
                     controller: _scrollController,
+                    reverse: true,
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     itemCount: messages.length + (chatProvider.isTyping ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (index == messages.length && chatProvider.isTyping) {
+                      // With reverse: true, index 0 = bottom of screen
+                      // Show typing indicator at the bottom (index 0)
+                      if (chatProvider.isTyping && index == 0) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: MessageBubble(
@@ -140,20 +139,20 @@ class _ChatScreenState extends State<ChatScreen> {
                         );
                       }
 
-                      final msg = messages[index];
+                      // Offset index if typing indicator is shown
+                      final msgIndex = chatProvider.isTyping
+                          ? messages.length - index
+                          : messages.length - 1 - index;
+                      if (msgIndex < 0 || msgIndex >= messages.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final msg = messages[msgIndex];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: MessageBubble(
                           message: msg,
                         ),
-                      )
-                          .animate()
-                          .fadeIn(duration: 300.ms)
-                          .slideY(
-                            begin: 0.1,
-                            duration: 300.ms,
-                            curve: Curves.easeOut,
-                          );
+                      );
                     },
                   ),
           ),
