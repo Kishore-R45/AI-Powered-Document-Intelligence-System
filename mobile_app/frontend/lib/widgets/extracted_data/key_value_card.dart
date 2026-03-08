@@ -7,6 +7,10 @@ class KeyValueCard extends StatelessWidget {
   final String value;
   final bool isLast;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final ValueChanged<bool?>? onSelectionChanged;
 
   const KeyValueCard({
     super.key,
@@ -14,6 +18,10 @@ class KeyValueCard extends StatelessWidget {
     required this.value,
     this.isLast = false,
     this.onDelete,
+    this.onEdit,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
   });
 
   @override
@@ -27,15 +35,37 @@ class KeyValueCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 4,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(2),
+              // ─── Selection checkbox in edit mode ───
+              if (isSelectionMode) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: isSelected,
+                      onChanged: onSelectionChanged,
+                      activeColor: AppTheme.brand600,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 8),
+              ],
+              // ─── Color bar ───
+              if (!isSelectionMode)
+                Container(
+                  width: 4,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              if (!isSelectionMode) const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,53 +93,76 @@ class KeyValueCard extends StatelessWidget {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: value));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('$keyLabel copied to clipboard'),
-                      duration: const Duration(seconds: 1),
+              if (!isSelectionMode) ...[
+                // ─── Edit button ───
+                if (onEdit != null)
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.brand600.withOpacity(0.15)
+                            : AppTheme.brand50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: AppTheme.brand600.withOpacity(0.7),
+                      ),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF252839)
-                        : AppTheme.neutral100,
-                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(
-                    Icons.copy_outlined,
-                    size: 16,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.4),
-                  ),
-                ),
-              ),
-              if (onDelete != null) ...[
-                const SizedBox(width: 6),
+                if (onEdit != null) const SizedBox(width: 6),
+                // ─── Copy button ───
                 GestureDetector(
-                  onTap: onDelete,
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$keyLabel copied to clipboard'),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? const Color(0xFF3A2030)
-                          : const Color(0xFFFFF0F0),
+                          ? const Color(0xFF252839)
+                          : AppTheme.neutral100,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(
-                      Icons.delete_outline,
+                      Icons.copy_outlined,
                       size: 16,
-                      color: const Color(0xFFFA5252).withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.4),
                     ),
                   ),
                 ),
+                if (onDelete != null) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF3A2030)
+                            : const Color(0xFFFFF0F0),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: 16,
+                        color: const Color(0xFFFA5252).withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),
