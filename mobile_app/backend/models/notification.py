@@ -143,7 +143,7 @@ class Notification:
         if not notification:
             return None
         created_at = notification.get('created_at')
-        created_at_iso = created_at.isoformat() if created_at else None
+        created_at_iso = (created_at.isoformat() + 'Z') if created_at else None
         return {
             'id': str(notification['_id']),
             'type': notification.get('type'),
